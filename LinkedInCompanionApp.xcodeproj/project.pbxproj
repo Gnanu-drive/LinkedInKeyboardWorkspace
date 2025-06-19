@@ -88,6 +88,11 @@
 			path = LinkedInShareExtension;
 			sourceTree = "<group>";
 		};
+		CDDABD902E04630500FC923F /* UI_PICTURES */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = UI_PICTURES;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +123,7 @@
 		CDDABD3C2E04403B00FC923F = {
 			isa = PBXGroup;
 			children = (
+				CDDABD902E04630500FC923F /* UI_PICTURES */,
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
 				CDDABD5B2E04409300FC923F /* LinkedInKeyboardExtension */,
 				CDDABD6C2E0440CA00FC923F /* LinkedInShareExtension */,
@@ -155,6 +161,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
+				CDDABD902E04630500FC923F /* UI_PICTURES */,
 			);
 			name = LinkedInCompanionApp;
 			packageProductDependencies = (
