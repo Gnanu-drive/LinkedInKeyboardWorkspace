@@ -7,24 +7,72 @@
 
 import UIKit
 import Social
+import UniformTypeIdentifiers
 
 class ShareViewController: SLComposeServiceViewController {
 
+    let appGroupID = "group.com.einstein.common" // Your App Group
+
     override func isContentValid() -> Bool {
-        // Do validation of contentText and/or NSExtensionContext attachments here
         return true
     }
 
     override func didSelectPost() {
-        // This is called after the user selects Post. Do the upload of contentText and/or NSExtensionContext attachments.
-    
-        // Inform the host that we're done, so it un-blocks its UI. Note: Alternatively you could call super's -didSelectPost, which will similarly complete the extension context.
-        self.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
+        if let extensionItem = extensionContext?.inputItems.first as? NSExtensionItem {
+            if let attachments = extensionItem.attachments {
+                for provider in attachments {
+                    if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+//                        provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { (item, error) in
+//                            if let url = item as? URL {
+//                                self.saveSharedLink(url.absoluteString)
+//                            }
+//                        }
+                        provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { (item, error) in
+                            if let url = item as? URL {
+                                DispatchQueue.main.async {
+                                    self.saveSharedLink(url.absoluteString)
+                                }
+                            }
+                        }
+
+                    } else if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+//                        provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { (item, error) in
+//                            if let text = item as? String {
+//                                self.saveSharedLink(text)
+//                            }
+//                        }
+                        provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { (item, error) in
+                            if let text = item as? String {
+                                DispatchQueue.main.async {
+                                    self.saveSharedLink(text)
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+        self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
+    func saveSharedLink(_ link: String) {
+        print("Saving link: \(link)")
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            var existing = sharedDefaults.stringArray(forKey: "SharedLinks") ?? []
+            existing.append(link)
+            sharedDefaults.set(existing, forKey: "SharedLinks")
+            sharedDefaults.synchronize()
+            print("Link saved to shared defaults,\(existing)")
+
+        } else {
+            print("Failed to access UserDefaults with app group")
+        }
+    }
+
 
     override func configurationItems() -> [Any]! {
-        // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
         return []
     }
-
 }
+
