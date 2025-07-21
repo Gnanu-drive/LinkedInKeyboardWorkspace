@@ -7,17 +7,25 @@
 		<key>LinkedInCompanionApp.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
-		</dict>
-		<key>LinkedInKeyboardExtension.xcscheme_^#shared#^_</key>
-		<dict>
-			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
-		<key>LinkedInShareExtension.xcscheme_^#shared#^_</key>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>CDDABD442E04403B00FC923F</key>
 		<dict>
-			<key>orderHint</key>
-			<integer>0</integer>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>CDDABD592E04409300FC923F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>CDDABD6A2E0440CA00FC923F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

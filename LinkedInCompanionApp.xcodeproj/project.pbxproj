@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		CDDABD612E04409300FC923F /* LinkedInKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CDDABD5A2E04409300FC923F /* LinkedInKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CDDABD752E0440CB00FC923F /* LinkedInShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CDDABD6B2E0440CA00FC923F /* LinkedInShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CDDDB2B52E0D9C4300CA0CB8 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CDDDB2B42E0D9C4300CA0CB8 /* GoogleSignIn */; };
+		CDDDB2B72E0D9C4700CA0CB8 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CDDDB2B62E0D9C4700CA0CB8 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,11 +66,21 @@
 			);
 			target = CDDABD6A2E0440CA00FC923F /* LinkedInShareExtension */;
 		};
+		CDDDB2B92E0DA9D100CA0CB8 /* Exceptions for "LinkedInCompanionApp" folder in "LinkedInCompanionApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CDDABD442E04403B00FC923F /* LinkedInCompanionApp */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CDDABD472E04403B00FC923F /* LinkedInCompanionApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CDDDB2B92E0DA9D100CA0CB8 /* Exceptions for "LinkedInCompanionApp" folder in "LinkedInCompanionApp" target */,
+			);
 			path = LinkedInCompanionApp;
 			sourceTree = "<group>";
 		};
@@ -100,6 +112,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CDDDB2B52E0D9C4300CA0CB8 /* GoogleSignIn in Frameworks */,
+				CDDDB2B72E0D9C4700CA0CB8 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +141,7 @@
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
 				CDDABD5B2E04409300FC923F /* LinkedInKeyboardExtension */,
 				CDDABD6C2E0440CA00FC923F /* LinkedInShareExtension */,
+				CDDDB2B32E0D9C4300CA0CB8 /* Frameworks */,
 				CDDABD462E04403B00FC923F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -139,6 +154,13 @@
 				CDDABD6B2E0440CA00FC923F /* LinkedInShareExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CDDDB2B32E0D9C4300CA0CB8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -165,6 +187,8 @@
 			);
 			name = LinkedInCompanionApp;
 			packageProductDependencies = (
+				CDDDB2B42E0D9C4300CA0CB8 /* GoogleSignIn */,
+				CDDDB2B62E0D9C4700CA0CB8 /* GoogleSignInSwift */,
 			);
 			productName = LinkedInCompanionApp;
 			productReference = CDDABD452E04403B00FC923F /* LinkedInCompanionApp.app */;
@@ -244,6 +268,9 @@
 			);
 			mainGroup = CDDABD3C2E04403B00FC923F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CDDDB2B22E0D9C3A00CA0CB8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CDDABD462E04403B00FC923F /* Products */;
 			projectDirPath = "";
@@ -446,9 +473,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"LinkedInCompanionApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 24627D558C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LinkedInCompanionApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -476,9 +504,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"LinkedInCompanionApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 24627D558C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LinkedInCompanionApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -500,8 +529,10 @@
 		CDDABD642E04409300FC923F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LinkedInKeyboardExtension/LinkedInKeyboardExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24627D558C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkedInKeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedInKeyboardExtension;
@@ -524,8 +555,10 @@
 		CDDABD652E04409300FC923F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LinkedInKeyboardExtension/LinkedInKeyboardExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24627D558C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkedInKeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedInKeyboardExtension;
@@ -548,8 +581,10 @@
 		CDDABD782E0440CB00FC923F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LinkedInShareExtension/LinkedInShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24627D558C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkedInShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedInShareExtension;
@@ -572,8 +607,10 @@
 		CDDABD792E0440CB00FC923F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LinkedInShareExtension/LinkedInShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24627D558C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkedInShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedInShareExtension;
@@ -633,6 +670,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CDDDB2B22E0D9C3A00CA0CB8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CDDDB2B42E0D9C4300CA0CB8 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CDDDB2B22E0D9C3A00CA0CB8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		CDDDB2B62E0D9C4700CA0CB8 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CDDDB2B22E0D9C3A00CA0CB8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CDDABD3D2E04403B00FC923F /* Project object */;
 }
