@@ -207,69 +207,65 @@ class KeyboardViewController: UIInputViewController {
     
     
     
-    func generateAIComment(link: String, tone: String, completion: @escaping (String?) -> Void) {
-        let apiKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"] ?? ""
-        print(apiKey)
-        let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
-        print(url)
-        print(apiKey)
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer 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", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let prompt = """
-        You are a LinkedIn Expert and have broad expertise.
-        This is the post link: "\(link)"
-        Understand the post like an expert and read images if available.
-        Generate a professional comment to the post in the "\(tone)" tone.
-        ONLY RESPOND WITH A COMMENT.
-        """
-
-        let body: [String: Any] = [
-            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-            "messages": [
-                ["role": "user", "content": prompt]
-            ],
-            "temperature": 1,
-            "top_p": 1,
-            "max_tokens": 512,
-            "stream": false // We don't stream here
-        ]
-
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-        } catch {
-            completion("❌ Failed to encode request.")
-            return
-        }
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion("❌ Network error: \(error.localizedDescription)")
-                return
-            }
-
-            guard let data = data else {
-                completion("❌ No data received.")
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let choices = json["choices"] as? [[String: Any]],
-                   let message = choices.first?["message"] as? [String: String],
-                   let content = message["content"] {
-                    completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
-                } else {
-                    completion("❌ Unexpected response.\(body)this is the api key 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")
-                }
-            } catch {
-                completion("❌ Failed to parse JSON.")
-            }
-
-        }.resume()
-    }
+//    func generateAIComment(link: String, tone: String, completion: @escaping (String?) -> Void) {
+//        let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("Bearer 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", forHTTPHeaderField: "Authorization")
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//
+//        let prompt = """
+//        You are a LinkedIn Expert and have broad expertise.
+//        This is the post link: "\(link)"
+//        Understand the post like an expert and read images if available.
+//        Generate a professional comment to the post in the "\(tone)" tone.
+//        ONLY RESPOND WITH A COMMENT.
+//        """
+//
+//        let body: [String: Any] = [
+//            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+//            "messages": [
+//                ["role": "user", "content": prompt]
+//            ],
+//            "temperature": 1,
+//            "top_p": 1,
+//            "max_tokens": 512,
+//            "stream": false // We don't stream here
+//        ]
+//
+//        do {
+//            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+//        } catch {
+//            completion("❌ Failed to encode request.")
+//            return
+//        }
+//
+//        URLSession.shared.dataTask(with: request) { data, response, error in
+//            if let error = error {
+//                completion("❌ Network error: \(error.localizedDescription)")
+//                return
+//            }
+//
+//            guard let data = data else {
+//                completion("❌ No data received.")
+//                return
+//            }
+//
+//            do {
+//                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+//                   let choices = json["choices"] as? [[String: Any]],
+//                   let message = choices.first?["message"] as? [String: String],
+//                   let content = message["content"] {
+//                    completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
+//                } else {
+//                    completion("❌ Unexpected response.\(body)this is the api key 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")
+//                }
+//            } catch {
+//                completion("❌ Failed to parse JSON.")
+//            }
+//
+//        }.resume()
+//    }
 
     @objc func AIPressed(_ sender: UIButton) {
         guard let title = sender.title(for: .normal) else { return }
@@ -282,6 +278,7 @@ class KeyboardViewController: UIInputViewController {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let defaults = UserDefaults(suiteName: "group.com.einstein.common")
+        let auth_token = defaults?.string(forKey: "userEmail")
         guard let links = defaults?.stringArray(forKey: "SharedLinks"),
               let lastLink = links.last else {
             textDocumentProxy.insertText("❌ No link found.\n")
@@ -289,19 +286,34 @@ class KeyboardViewController: UIInputViewController {
         }
 
         textDocumentProxy.insertText("🤖 Generating AI comment...\n")
-
-        generateAIComment(link: lastLink, tone: tone) { aiReply in
-            DispatchQueue.main.async {
-                // Clear existing text and insert new content
-                while self.textDocumentProxy.hasText {
-                    self.textDocumentProxy.deleteBackward()
-                }
-                let clearResponse = (aiReply ?? "⚠️ Error from AI.").trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-                self.textDocumentProxy.insertText(clearResponse)
-
-                self.toggleAIMode(show: false)
+        let token: String
+        token = auth_token ?? "not found"
+        
+        let comment_generator = LinkedInCommentGenerator(authToken:token)
+        
+        comment_generator.generateAIComment(link: lastLink, tone: tone) { comment in
+            print(comment ?? "No comment generated.")
+            while self.textDocumentProxy.hasText {
+                self.textDocumentProxy.deleteBackward()
             }
+            let rawResponse = (comment ?? "⚠️ Error from AI.")
+            var cleaned = rawResponse
+            
+            if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") {
+                    cleaned.removeFirst()
+                    cleaned.removeLast()
+                }
+
+                // Replace common escape sequences
+                cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
+                                 .replacingOccurrences(of: "\\\"", with: " ")
+                                 .replacingOccurrences(of: "\\t", with: " ")
+                                 .replacingOccurrences(of: "\\\\", with: " ")
+            self.textDocumentProxy.insertText(cleaned)
+
+            self.toggleAIMode(show: false)
         }
+        
     }
 
 
@@ -320,4 +332,9 @@ class KeyboardViewController: UIInputViewController {
         textDocumentProxy.deleteBackward()
     }
 }
+
+
+
+
+
 

@@ -138,26 +138,8 @@ class ApiService {
     private init() {}
 
     // MARK: - Login
-    func login(email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
-        let url = URL(string: "\(baseURL)/auth/login")!
-        let body = ["email": email, "password": password]
 
-        sendPOSTRequest(to: url, body: body) { result in
-            switch result {
-            case .success(let json):
-                if let token = json["token"] as? String {
-                    self.authToken = token
-                    UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                    UserDefaults.standard.set(email, forKey: "userEmail")
-                    completion(true, nil)
-                } else {
-                    completion(false, "Token missing in response")
-                }
-            case .failure(let error):
-                completion(false, error.localizedDescription)
-            }
-        }
-    }
+
 
     // MARK: - Signup
     func signup(name: String, email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
