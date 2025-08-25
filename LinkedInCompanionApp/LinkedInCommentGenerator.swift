@@ -58,7 +58,7 @@ class LinkedInCommentGenerator {
     
     // MARK: - Scraping Function
     private func scrapeLinkedInPost(url: String, completion: @escaping (PostData?) -> Void) {
-        guard let encodedURL = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+        guard let _ = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let requestURL = URL(string: "https://backend.einsteini.ai/scrape?url=\(url)") else {
             completion(createErrorPostData(url: url, message: "❌ Invalid URL format"))
             return

@@ -73,6 +73,39 @@ class ShareViewController: SLComposeServiceViewController {
     }
 
     /// Fire API calls for the latest shared link
+//    private func processLatestLink(_ link: String) {
+//        let defaults = UserDefaults(suiteName: appGroupID)
+//        defaults?.synchronize()
+//        let authToken = defaults?.string(forKey: "userEmail") ?? "not_found"
+//
+//        let commentGenerator = LinkedInCommentGenerator(authToken: authToken)
+//
+//        // Example: run all 4 tones in sequence
+//        let tones = ["Applaud", "Comment", "Agree", "Insight"]
+//        var results: [String: String] = [:]
+//
+//        let group = DispatchGroup()
+//
+//        for tone in tones {
+//            group.enter()
+//            commentGenerator.generateAIComment(link: link, tone: tone) { comment in
+//                results[tone] = comment ?? "⚠️ Error"
+//                group.leave()
+//            }
+//        }
+//
+//        group.notify(queue: .main) {
+//            print("✅ All API calls finished: \(results)")
+//            // Save results back to shared defaults
+//            if let sharedDefaults = UserDefaults(suiteName: self.appGroupID) {
+//                sharedDefaults.set(results, forKey: "LatestResult")
+//                sharedDefaults.set(link, forKey: "LastProcessedLink")
+//                sharedDefaults.synchronize()
+//                print("Results saved to App Group")
+//            }
+//            self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+//        }
+//    }
     private func processLatestLink(_ link: String) {
         let defaults = UserDefaults(suiteName: appGroupID)
         defaults?.synchronize()
@@ -80,32 +113,46 @@ class ShareViewController: SLComposeServiceViewController {
 
         let commentGenerator = LinkedInCommentGenerator(authToken: authToken)
 
-        // Example: run all 4 tones in sequence
-        let tones = ["Applaud", "Comment", "Agree", "Insight"]
-        var results: [String: String] = [:]
-
-        let group = DispatchGroup()
-
-        for tone in tones {
-            group.enter()
-            commentGenerator.generateAIComment(link: link, tone: tone) { comment in
-                results[tone] = comment ?? "⚠️ Error"
-                group.leave()
+        // Step 1: Scrape once
+        commentGenerator.scrapeLinkedInPost(url: link) { postData in
+            guard let postData = postData else {
+                print("❌ Failed to scrape post")
+                return
             }
-        }
 
-        group.notify(queue: .main) {
-            print("✅ All API calls finished: \(results)")
-            // Save results back to shared defaults
-            if let sharedDefaults = UserDefaults(suiteName: self.appGroupID) {
-                sharedDefaults.set(results, forKey: "LatestResult")
-                sharedDefaults.set(link, forKey: "LastProcessedLink")
-                sharedDefaults.synchronize()
-                print("Results saved to App Group")
+            let tones = ["Applaud", "Comment", "Agree", "Insight"]
+            var results: [String: String] = [:]
+
+            let group = DispatchGroup()
+
+            // Step 2: Generate comments for each tone
+            for tone in tones {
+                group.enter()
+                commentGenerator.generateComment(
+                    postContent: postData.content,
+                    author: postData.author,
+                    commentType: tone,
+                    imageUrl: postData.images.first
+                ) { comment in
+                    results[tone] = comment ?? "⚠️ Error"
+                    group.leave()
+                }
             }
-            self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+
+            // Step 3: Save once all done
+            group.notify(queue: .main) {
+                print("✅ All API calls finished: \(results)")
+                if let sharedDefaults = UserDefaults(suiteName: self.appGroupID) {
+                    sharedDefaults.set(results, forKey: "LatestResult")
+                    sharedDefaults.set(link, forKey: "LastProcessedLink")
+                    sharedDefaults.synchronize()
+                    print("Results saved to App Group")
+                }
+                self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            }
         }
     }
+
 
 
     override func configurationItems() -> [Any]! {

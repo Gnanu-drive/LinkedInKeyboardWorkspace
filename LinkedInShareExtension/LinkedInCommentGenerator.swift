@@ -21,7 +21,7 @@ class LinkedInCommentGenerator {
                 return
             }
             self.generateComment(
-                postContent: link,
+                postContent: postData.content,
                 author: postData.author,
                 commentType: tone,
                 imageUrl: postData.images.first
@@ -49,8 +49,8 @@ class LinkedInCommentGenerator {
     }
     
     // MARK: - Scraping Function
-    private func scrapeLinkedInPost(url: String, completion: @escaping (PostData?) -> Void) {
-        guard let encodedURL = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+    func scrapeLinkedInPost(url: String, completion: @escaping (PostData?) -> Void) {
+        guard let _ = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let requestURL = URL(string: "https://backend.einsteini.ai/scrape?url=\(url)") else {
             completion(createErrorPostData(url: url, message: "❌ Invalid URL format"))
             return
@@ -97,7 +97,7 @@ class LinkedInCommentGenerator {
     }
     
     // MARK: - Comment Generation
-    private func generateComment(postContent: String, author: String, commentType: String, imageUrl: String? = nil, completion: @escaping (String?) -> Void) {
+    func generateComment(postContent: String, author: String, commentType: String, imageUrl: String? = nil, completion: @escaping (String?) -> Void) {
         let prompt = "Generate a \(commentType) tone comment for a LinkedIn post by \(author): \(postContent)"
         guard let requestURL = URL(string: "\(Self.baseURL)/comment") else {
             completion("❌ Invalid comment API URL")
@@ -361,27 +361,3 @@ class LinkedInCommentGenerator {
     }
 }
 
-// MARK: - Usage Example
-/*
-// Initialize the service
-let commentGenerator = LinkedInCommentGenerator()
-
-// Set auth token in UserDefaults (do this once when user logs in)
-UserDefaults.standard.set("your-auth-token", forKey: "authToken")
-
-// Generate comment from LinkedIn URL
-commentGenerator.generateAIComment(
-    link: "https://www.linkedin.com/posts/your-post-url",
-    tone: "insightful"
-) { aiReply in
-    DispatchQueue.main.async {
-        if let aiReply = aiReply {
-            let clearResponse = aiReply.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            print("Generated comment: \(clearResponse)")
-            // Use your comment here
-        } else {
-            print("⚠️ Error from AI.")
-        }
-    }
-}
-*/

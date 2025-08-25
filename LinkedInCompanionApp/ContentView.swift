@@ -112,29 +112,36 @@ struct KeyboardSetupView: View {
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
 
-            Button("Open Settings") {
+            Button(action: {
                 guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                 openURL(url)
+            }) {
+                Text("Open Settings")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, minHeight: 44)  // Frame inside label
+                    .background(Color.purple)
+                    .cornerRadius(22)
             }
-            .font(.headline)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(Color.purple)
-            .foregroundColor(.white)
-            .cornerRadius(22)
+
 
             Toggle("I have enabled the keyboard", isOn: $hasConfirmed)
                 .padding(.top, 12)
 
-            Button("Continue") {
+            Button(action: {
                 requestPermissions()
                 hasCompletedSetup = true
+            }) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(hasConfirmed ? Color.green : Color.gray)
+                    .cornerRadius(22)
             }
             .disabled(!hasConfirmed)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(hasConfirmed ? Color.green : Color.gray)
-            .foregroundColor(.white)
-            .cornerRadius(22)
             .padding(.top)
+ // <-- Full frame tappable
 
             Spacer()
         }
@@ -158,62 +165,6 @@ struct KeyboardSetupView: View {
 
 // MARK: - Main App View
 
-struct ApiTestView: View {
-    @State private var previewText: String = "Loading..."
-    
-    let apiURL = "https://backend.einsteini.ai/scrape?url=https://www.linkedin.com/posts/project-jatayu-rvce_project-jatayu-had-the-privilege-and-honour-ugcPost-7353267182069260291-Gw-R?utm_source=share&utm_medium=member_desktop&rcm=ACoAAEg_wbIBgVA5wmxmco4Y7S6l6lZo5wW5xHg"
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("API Response Preview")
-                .font(.headline)
-
-            ScrollView {
-                Text(previewText)
-                    .font(.body)
-                    .padding()
-            }
-        }
-        .onAppear {
-            fetchPreview()
-        }
-        .padding()
-    }
-    
-    func fetchPreview() {
-        guard let url = URL(string: apiURL) else {
-            previewText = "Invalid URL"
-            return
-        }
-
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    previewText = "Error: \(error.localizedDescription)"
-                }
-                return
-            }
-            
-            if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                let shortPreview: String
-                if responseString.count > 150 {
-                    let index = responseString.index(responseString.startIndex, offsetBy: 150)
-                    shortPreview = String(responseString[..<index]) + "..."
-                } else {
-                    shortPreview = responseString
-                }
-                DispatchQueue.main.async {
-                    previewText = shortPreview
-                }
-            } else {
-                DispatchQueue.main.async {
-                    previewText = "No valid response received"
-                }
-            }
-        }.resume()
-    }
-}
-
 struct MainAppView: View {
     @EnvironmentObject var appState: AppState
     @State private var sharedLinks: [String] = []
@@ -236,15 +187,6 @@ struct MainAppView: View {
                 Text("Logged in as: \(email)")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-            }
-            Button("🔎 Open API Test View") {
-                showApiTest = true
-            }
-            .padding()
-            .background(Color.purple.opacity(0.1))
-            .cornerRadius(8)
-            .sheet(isPresented: $showApiTest) {
-                ApiTestView()
             }
 
             Group {
