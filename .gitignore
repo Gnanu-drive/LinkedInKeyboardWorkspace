@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build products
+build/
+DerivedData/
+*.ipa
+
+# User-specific Xcode files
+*.xcodeproj/project.xcworkspace
+*.xcodeproj/xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
