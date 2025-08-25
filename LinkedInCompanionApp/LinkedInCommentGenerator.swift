@@ -20,6 +20,14 @@ class LinkedInCommentGenerator {
                 completion("❌ Failed to scrape post")
                 return
             }
+//            
+//            // Check if content is meaningful
+//            if postData.content.contains("Error:") {
+//                completion("❌ Scraping error: \(postData.content)")
+//                return
+//            }
+            
+            // Step 2: Generate comment based on scraped content
             self.generateComment(
                 postContent: link,
                 author: postData.author,

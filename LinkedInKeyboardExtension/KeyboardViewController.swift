@@ -16,7 +16,31 @@ class KeyboardViewController: UIInputViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         setupKeyboard()
+        
+        addBackToSystemKeyboardButton()
+    }
+
+    func addBackToSystemKeyboardButton() {
+        let backButton = UIButton(type: .system)
+        backButton.setTitle("🌐", for: .normal)   // Label it however you want
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        backButton.addTarget(self,
+                             action: #selector(backToSystemKeyboard),
+                             for: .touchUpInside)
+        
+        view.addSubview(backButton)
+        
+        NSLayoutConstraint.activate([
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            backButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10)
+        ])
+    }
+
+    @objc func backToSystemKeyboard() {
+        self.advanceToNextInputMode()
     }
 
     // MARK: - Setup
@@ -35,6 +59,25 @@ class KeyboardViewController: UIInputViewController {
         
         setupBasicKeys()
         setupAIToolbar()
+    }
+    
+    func addNextKeyboardButton() {
+        let nextKeyboardButton = UIButton(type: .system)
+        nextKeyboardButton.setTitle("🌐", for: .normal) // looks like globe
+        nextKeyboardButton.sizeToFit()
+        
+        nextKeyboardButton.translatesAutoresizingMaskIntoConstraints = false
+        nextKeyboardButton.addTarget(self,
+            action: #selector(handleInputModeList(from:with:)),
+            for: .allTouchEvents)
+
+        view.addSubview(nextKeyboardButton)
+        
+        // place it bottom left
+        NSLayoutConstraint.activate([
+            nextKeyboardButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            nextKeyboardButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10)
+        ])
     }
 
     func setupBasicKeys() {
@@ -167,7 +210,7 @@ class KeyboardViewController: UIInputViewController {
     func populateLinkedInButtons() {
         clearAIToolbar()
 
-        let suggestions = ["👏 Applaud", "👍🏽 agree", "💬 Comment", "👀 comment on  Insights"]
+        let suggestions = ["👏 Applaud", "👍🏽 Agree", "💬 Comment", "👀 comment on  Insights"]
 
         let suggestionStack = UIStackView()
         suggestionStack.axis = .horizontal
@@ -206,116 +249,93 @@ class KeyboardViewController: UIInputViewController {
     }
     
     
-    
-//    func generateAIComment(link: String, tone: String, completion: @escaping (String?) -> Void) {
-//        let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.setValue("Bearer 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", forHTTPHeaderField: "Authorization")
-//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//    @objc func AIPressed(_ sender: UIButton) {
+//        guard let title = sender.title(for: .normal) else { return }
 //
-//        let prompt = """
-//        You are a LinkedIn Expert and have broad expertise.
-//        This is the post link: "\(link)"
-//        Understand the post like an expert and read images if available.
-//        Generate a professional comment to the post in the "\(tone)" tone.
-//        ONLY RESPOND WITH A COMMENT.
-//        """
+//        let tone = title
+//            .replacingOccurrences(of: "👏", with: "Applaud")
+//            .replacingOccurrences(of: "💬", with: "Comment")
+//            .replacingOccurrences(of: "👍🏽", with: "Agree")
+//            .replacingOccurrences(of: "👀", with: "Insight")
+//            .trimmingCharacters(in: .whitespacesAndNewlines)
 //
-//        let body: [String: Any] = [
-//            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-//            "messages": [
-//                ["role": "user", "content": prompt]
-//            ],
-//            "temperature": 1,
-//            "top_p": 1,
-//            "max_tokens": 512,
-//            "stream": false // We don't stream here
-//        ]
-//
-//        do {
-//            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-//        } catch {
-//            completion("❌ Failed to encode request.")
+//        let defaults = UserDefaults(suiteName: "group.com.einstein.common")
+//        let auth_token = defaults?.string(forKey: "userEmail")
+//        guard let links = defaults?.stringArray(forKey: "SharedLinks"),
+//              let lastLink = links.last else {
+//            textDocumentProxy.insertText("❌ No link found.\n")
 //            return
 //        }
 //
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let error = error {
-//                completion("❌ Network error: \(error.localizedDescription)")
-//                return
+//        textDocumentProxy.insertText("🤖 Generating AI comment...\n")
+//        let token: String
+//        token = auth_token ?? "not found"
+//        
+//        let comment_generator = LinkedInCommentGenerator(authToken:token)
+//        
+//        comment_generator.generateAIComment(link: lastLink, tone: tone) { comment in
+//            print(comment ?? "No comment generated.")
+//            while self.textDocumentProxy.hasText {
+//                self.textDocumentProxy.deleteBackward()
 //            }
-//
-//            guard let data = data else {
-//                completion("❌ No data received.")
-//                return
-//            }
-//
-//            do {
-//                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-//                   let choices = json["choices"] as? [[String: Any]],
-//                   let message = choices.first?["message"] as? [String: String],
-//                   let content = message["content"] {
-//                    completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
-//                } else {
-//                    completion("❌ Unexpected response.\(body)this is the api key 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")
+//            let rawResponse = (comment ?? "⚠️ Error from AI.")
+//            var cleaned = rawResponse
+//            
+//            if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") {
+//                    cleaned.removeFirst()
+//                    cleaned.removeLast()
 //                }
-//            } catch {
-//                completion("❌ Failed to parse JSON.")
-//            }
 //
-//        }.resume()
+//                // Replace common escape sequences
+//                cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
+//                                 .replacingOccurrences(of: "\\\"", with: " ")
+//                                 .replacingOccurrences(of: "\\t", with: " ")
+//                                 .replacingOccurrences(of: "\\\\", with: " ")
+//            self.textDocumentProxy.insertText(cleaned)
+//
+//            self.toggleAIMode(show: false)
+//        }
+//        
 //    }
-
+    
+    
     @objc func AIPressed(_ sender: UIButton) {
         guard let title = sender.title(for: .normal) else { return }
 
         let tone = title
-            .replacingOccurrences(of: "👏", with: "Applaud")
-            .replacingOccurrences(of: "💬", with: "Comment")
-            .replacingOccurrences(of: "👍🏽", with: "Agree")
-            .replacingOccurrences(of: "👀", with: "Insight")
+            .replacingOccurrences(of: "👏 ", with: "")
+            .replacingOccurrences(of: "💬 ", with: "")
+            .replacingOccurrences(of: "👍🏽 ", with: "")
+            .replacingOccurrences(of: "👀 comment on  ", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let defaults = UserDefaults(suiteName: "group.com.einstein.common")
-        let auth_token = defaults?.string(forKey: "userEmail")
-        guard let links = defaults?.stringArray(forKey: "SharedLinks"),
-              let lastLink = links.last else {
-            textDocumentProxy.insertText("❌ No link found.\n")
+        defaults?.synchronize()
+
+        guard let lastLink = defaults?.string(forKey: "LastProcessedLink"),
+              let results = defaults?.dictionary(forKey: "LatestResult") as? [String: String],
+              let comment = results[tone] else {
+            textDocumentProxy.insertText("❌ No processed result found.\n")
             return
         }
 
-        textDocumentProxy.insertText("🤖 Generating AI comment...\n")
-        let token: String
-        token = auth_token ?? "not found"
-        
-        let comment_generator = LinkedInCommentGenerator(authToken:token)
-        
-        comment_generator.generateAIComment(link: lastLink, tone: tone) { comment in
-            print(comment ?? "No comment generated.")
-            while self.textDocumentProxy.hasText {
-                self.textDocumentProxy.deleteBackward()
-            }
-            let rawResponse = (comment ?? "⚠️ Error from AI.")
-            var cleaned = rawResponse
-            
-            if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") {
-                    cleaned.removeFirst()
-                    cleaned.removeLast()
-                }
-
-                // Replace common escape sequences
-                cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
-                                 .replacingOccurrences(of: "\\\"", with: " ")
-                                 .replacingOccurrences(of: "\\t", with: " ")
-                                 .replacingOccurrences(of: "\\\\", with: " ")
-            self.textDocumentProxy.insertText(cleaned)
-
-            self.toggleAIMode(show: false)
+        // Clean + insert result
+        var cleaned = comment
+        if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") {
+            cleaned.removeFirst()
+            cleaned.removeLast()
         }
-        
-    }
+        cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
+                         .replacingOccurrences(of: "\\\"", with: " ")
+                         .replacingOccurrences(of: "\\t", with: " ")
+                         .replacingOccurrences(of: "\\\\", with: " ")
 
+        while self.textDocumentProxy.hasText {
+            self.textDocumentProxy.deleteBackward()
+        }
+        self.textDocumentProxy.insertText(cleaned)
+        self.toggleAIMode(show: false)
+    }
 
     // MARK: - Other Keyboard Actions
 

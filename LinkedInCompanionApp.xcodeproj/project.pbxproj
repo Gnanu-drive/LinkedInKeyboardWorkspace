@@ -70,14 +70,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				"LinkedInCompanionApp 2025-07-21 21-29-17/DistributionSummary.plist",
-				"LinkedInCompanionApp 2025-07-21 21-29-17/ExportOptions.plist",
-				"LinkedInCompanionApp 2025-07-21 21-29-17/LinkedInCompanionApp.ipa",
-				"LinkedInCompanionApp 2025-07-21 21-29-17/Packaging.log",
-				"LinkedInCompanionApp 2025-07-21 23-11-13/DistributionSummary.plist",
-				"LinkedInCompanionApp 2025-07-21 23-11-13/ExportOptions.plist",
-				"LinkedInCompanionApp 2025-07-21 23-11-13/LinkedInCompanionApp.ipa",
-				"LinkedInCompanionApp 2025-07-21 23-11-13/Packaging.log",
 			);
 			target = CDDABD442E04403B00FC923F /* LinkedInCompanionApp */;
 		};
@@ -106,11 +98,6 @@
 				CDDABD762E0440CB00FC923F /* Exceptions for "LinkedInShareExtension" folder in "LinkedInShareExtension" target */,
 			);
 			path = LinkedInShareExtension;
-			sourceTree = "<group>";
-		};
-		CDDABD902E04630500FC923F /* UI_PICTURES */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UI_PICTURES;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -145,7 +132,6 @@
 		CDDABD3C2E04403B00FC923F = {
 			isa = PBXGroup;
 			children = (
-				CDDABD902E04630500FC923F /* UI_PICTURES */,
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
 				CDDABD5B2E04409300FC923F /* LinkedInKeyboardExtension */,
 				CDDABD6C2E0440CA00FC923F /* LinkedInShareExtension */,
@@ -191,7 +177,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
-				CDDABD902E04630500FC923F /* UI_PICTURES */,
 			);
 			name = LinkedInCompanionApp;
 			packageProductDependencies = (
