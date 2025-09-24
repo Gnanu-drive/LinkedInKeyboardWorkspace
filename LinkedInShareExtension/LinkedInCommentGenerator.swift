@@ -14,21 +14,14 @@ class LinkedInCommentGenerator {
     /// Generates a comment for a LinkedIn post from its URL
     func generateAIComment(link: String, tone: String, completion: @escaping (String?) -> Void) {
         // Step 1: Scrape the LinkedIn post
-        scrapeLinkedInPost(url: link) { postData in
-            
-            guard let postData = postData else {
-                completion("❌ Failed to scrape post")
-                return
-            }
             self.generateComment(
-                postContent: postData.content,
-                author: postData.author,
+                postContent: link,
+                author: link,
                 commentType: tone,
-                imageUrl: postData.images.first
+                imageUrl: link
             ) { comment in
                 completion(comment)
             }
-        }
     }
     
     // MARK: - Post Data Structure
