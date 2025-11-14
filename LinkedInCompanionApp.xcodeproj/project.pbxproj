@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CD7C5FE72E9BE33100F5659D /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD7C5FE62E9BE33100F5659D /* StoreKit.framework */; };
+		CD8B547F2EB0780500ED6782 /* CreditPurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8B547E2EB0780500ED6782 /* CreditPurchaseManager.swift */; };
+		CD8B54812EB0782C00ED6782 /* Store_Plans.storekit in Resources */ = {isa = PBXBuildFile; fileRef = CD8B54802EB0782C00ED6782 /* Store_Plans.storekit */; };
 		CDDABD612E04409300FC923F /* LinkedInKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CDDABD5A2E04409300FC923F /* LinkedInKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CDDABD752E0440CB00FC923F /* LinkedInShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CDDABD6B2E0440CA00FC923F /* LinkedInShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CDDDB2B52E0D9C4300CA0CB8 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CDDDB2B42E0D9C4300CA0CB8 /* GoogleSignIn */; };
@@ -46,6 +49,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CD7C5FE62E9BE33100F5659D /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		CD8B547E2EB0780500ED6782 /* CreditPurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditPurchaseManager.swift; sourceTree = "<group>"; };
+		CD8B54802EB0782C00ED6782 /* Store_Plans.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Store_Plans.storekit; sourceTree = "<group>"; };
 		CDDABD452E04403B00FC923F /* LinkedInCompanionApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinkedInCompanionApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDDABD5A2E04409300FC923F /* LinkedInKeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LinkedInKeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDDABD6B2E0440CA00FC923F /* LinkedInShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LinkedInShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +113,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CD7C5FE72E9BE33100F5659D /* StoreKit.framework in Frameworks */,
 				CDDDB2B52E0D9C4300CA0CB8 /* GoogleSignIn in Frameworks */,
 				CDDDB2B72E0D9C4700CA0CB8 /* GoogleSignInSwift in Frameworks */,
 			);
@@ -132,6 +139,8 @@
 		CDDABD3C2E04403B00FC923F = {
 			isa = PBXGroup;
 			children = (
+				CD8B54802EB0782C00ED6782 /* Store_Plans.storekit */,
+				CD8B547E2EB0780500ED6782 /* CreditPurchaseManager.swift */,
 				CDDABD472E04403B00FC923F /* LinkedInCompanionApp */,
 				CDDABD5B2E04409300FC923F /* LinkedInKeyboardExtension */,
 				CDDABD6C2E0440CA00FC923F /* LinkedInShareExtension */,
@@ -153,6 +162,7 @@
 		CDDDB2B32E0D9C4300CA0CB8 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				CD7C5FE62E9BE33100F5659D /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -239,7 +249,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1640;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					CDDABD442E04403B00FC923F = {
 						CreatedOnToolsVersion = 16.2;
@@ -281,6 +291,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CD8B54812EB0782C00ED6782 /* Store_Plans.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +316,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CD8B547F2EB0780500ED6782 /* CreditPurchaseManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,6 +409,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -454,6 +467,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};

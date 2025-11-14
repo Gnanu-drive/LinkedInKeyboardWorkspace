@@ -1,386 +1,506 @@
-//
-//  KeyboardViewController.swift
-//  LinkedInKeyboardExtension
-//
-//  Created by Gnanendra Naidu N on 19/06/25.
-//
-
 import UIKit
 
-class KeyboardViewController: UIInputViewController {
+class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPickerViewDataSource {
     
-    var keyboardView: UIView!
-    var aiButton: UIButton!
-    var aiToolbar: UIView!
-    var isAIMode = false
-    let color: UIColor = .white
+    // MARK: - Prompts
+//    let prompts = [" Applaud ", "Agree", "Fun", " Perspective ", "Question", "Translate", "Personalize"]
+    let prompts = [" Applaud ", " Agree ", " Fun ", " Perspective ", " Question ", "Translate"]
+    private var nextKeyboardButton: UIButton!
     
-    // MARK: - Keyboard State
-    enum KeyboardMode {
-        case alphabet, numbers, symbols
-    }
-    var keyboardMode: KeyboardMode = .alphabet
-    var isShiftEnabled = false
-    var isCapsLock = false
     
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupKeyboard()
-    }
-
-    // MARK: - Setup
-    func setupKeyboard() {
-        keyboardView = UIView()
-        keyboardView.backgroundColor = UIColor.systemGray4
-        view.addSubview(keyboardView)
-        
-        keyboardView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            keyboardView.leftAnchor.constraint(equalTo: view.leftAnchor),
-            keyboardView.rightAnchor.constraint(equalTo: view.rightAnchor),
-            keyboardView.topAnchor.constraint(equalTo: view.topAnchor),
-            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        
-        setupBasicKeys()
-        setupAIToolbar()
-    }
+    // MARK: - Translate UI data
+    private let languages = ["English", "Spanish", "French", "German", "Hindi", "Japanese"]
+    private let commentTypes = [" Applaud ", " Agree ", " Fun ", " Perspective ", " Question "]
     
-    func setupBasicKeys() {
-        for sub in keyboardView.subviews { sub.removeFromSuperview() }
-        
-        let mainStack = UIStackView()
-        mainStack.axis = .vertical
-        mainStack.spacing = 8
-        mainStack.distribution = .fillEqually
-
-        for row in layoutForCurrentMode() {
-            mainStack.addArrangedSubview(row)
-        }
-        mainStack.addArrangedSubview(bottomRow())
-
-        keyboardView.addSubview(mainStack)
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            mainStack.leftAnchor.constraint(equalTo: keyboardView.leftAnchor, constant: 10),
-            mainStack.rightAnchor.constraint(equalTo: keyboardView.rightAnchor, constant: -10),
-            mainStack.topAnchor.constraint(equalTo: keyboardView.topAnchor, constant: 50),
-            mainStack.bottomAnchor.constraint(equalTo: keyboardView.bottomAnchor, constant: -10)
-        ])
-    }
+    // UI references
+    private var mainStack: UIStackView!
+    private var translateView: UIView?
+    private var languagePicker: UIPickerView!
+    private var typePicker: UIPickerView!
+    private var goButton: UIButton?
     
-    func layoutForCurrentMode() -> [UIStackView] {
-        switch keyboardMode {
-        case .alphabet:
-            let row1 = createKeyRow(["Q","W","E","R","T","Y","U","I","O","P"])
-            let row2 = createKeyRow(["A","S","D","F","G","H","J","K","L"])
-            let row3 = createKeyRow(["⇧","123","Z","X","C","V","B","N","M","⌫"])
-            return [row1, row2, row3]
-            
-        case .numbers:
-            let row1 = createKeyRow(["1","2","3","4","5","6","7","8","9","0"])
-            let row2 = createKeyRow(["-","/",":",";","(",")","₹","&","@","\""])
-            let row3 = createKeyRow(["#+=",".",",","?","!","⌫"])
-            return [row1, row2, row3]
-            
-        case .symbols:
-            let row1 = createKeyRow(["[","]","{","}","#","%","^","*","+","="])
-            let row2 = createKeyRow(["_","\\","|","~","<",">","€","£","¥","•"])
-            let row3 = createKeyRow(["ABC",".",",","?","!","⌫"])
-            return [row1, row2, row3]
-        }
-    }
+    private var personalizeView: UIView?
+    private var personalizeToneInput: UITextField?
     
-    func createKeyRow(_ letters: [String]) -> UIStackView {
-        let stackView = UIStackView()
-        stackView.axis = .horizontal
-        stackView.spacing = 4
-        stackView.distribution = .fillEqually
-        
-        for letter in letters {
-            let button = createLetterButton(letter)
-            stackView.addArrangedSubview(button)
-        }
-        return stackView
-    }
+    // Selected indices (default 0)
+    private var selectedLanguageIndex = 0
+    private var selectedTypeIndex = 0
+    
+    //emoji and hashtags
+    private var emojisToggle: UIButton!
+    private var hashtagsToggle: UIButton!
 
-    func createLetterButton(_ letter: String) -> UIButton {
-        let button = UIButton(type: .system)
-        button.setTitle(letter, for: .normal)
-        button.setTitleColor(.black, for: .normal)
-        
-        // Style
-        button.backgroundColor = UIColor.white
-        button.layer.cornerRadius = 12
-        button.layer.borderWidth = 0.5
-        button.layer.borderColor = UIColor.lightGray.cgColor
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        
-        if letter == "⌫" {
-            button.addTarget(self, action: #selector(deletePressed), for: .touchUpInside)
-        } else if letter == "⇧" {
-            button.addTarget(self, action: #selector(shiftPressed(_:)), for: .touchUpInside)
-        } else if letter == "123" {
-            button.addTarget(self, action: #selector(switchToNumbers), for: .touchUpInside)
-        } else if letter == "#+=" {
-            button.addTarget(self, action: #selector(switchToSymbols), for: .touchUpInside)
-        } else if letter == "ABC" {
-            button.addTarget(self, action: #selector(switchToAlphabet), for: .touchUpInside)
-        } else {
-            button.addTarget(self, action: #selector(letterPressed(_:)), for: .touchUpInside)
-        }
-        styleKeyButton(button)
-        return button
-    }
-
-    func createSpecialButton(_ title: String, color: UIColor) -> UIButton {
+    // States
+    private var isEmojisEnabled = false
+    private var isHashtagsEnabled = false
+    
+    private func createToggleButton(title: String, isOn: Bool, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = color
-        button.layer.cornerRadius = 20
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        styleKeyButton(button)
+        button.backgroundColor = isOn ? .systemPurple : .systemGray
+        button.layer.cornerRadius = 12
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        button.addTarget(self, action: action, for: .touchUpInside)
         return button
     }
 
-    func bottomRow() -> UIStackView {
-        let row4 = UIStackView()
-        row4.axis = .horizontal
-        row4.spacing = 6
-        row4.distribution = .fill
-        
-        let globeButton = createSpecialButton("🌐", color: .lightGray)
-        globeButton.addTarget(self, action: #selector(backToSystemKeyboard), for: .touchUpInside)
-        globeButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
-        
-        
-        aiButton = createSpecialButton("🤖 AI", color: .purple)
-        aiButton.addTarget(self, action: #selector(aiButtonPressed), for: .touchUpInside)
-        aiButton.widthAnchor.constraint(equalToConstant: 70).isActive = true
-        
-        let spaceButton = createSpecialButton("space", color: .lightGray)
-        spaceButton.addTarget(self, action: #selector(spacePressed), for: .touchUpInside)
-        
-        let returnButton = createSpecialButton("⏎", color: .lightGray)
-        returnButton.addTarget(self, action: #selector(returnPressed), for: .touchUpInside)
-        returnButton.widthAnchor.constraint(equalToConstant: 60).isActive = true
-        
-        row4.addArrangedSubview(globeButton)
-        row4.addArrangedSubview(aiButton)
-        row4.addArrangedSubview(spaceButton)
-        row4.addArrangedSubview(returnButton)
-        return row4
+    
+    // MARK: - Lifecycle
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupPromptKeyboard()
+        setupNextKeyboardButton()
+        setupAlwaysVisibleToggles()
     }
     
-    // MARK: - Shift / Caps
-    @objc func shiftPressed(_ sender: UIButton) {
-        if isShiftEnabled {
-            // Double tap → Caps Lock
-            isCapsLock = true
-            isShiftEnabled = false
-            sender.backgroundColor = .systemBlue
-        } else if isCapsLock {
-            // Turn off Caps
-            isCapsLock = false
-            sender.backgroundColor = .white
-        } else {
-            // Enable Shift
-            isShiftEnabled = true
-            isCapsLock = false
-            sender.backgroundColor = .systemGray4
-        }
-        updateKeyLabels()
-    }
-
     
-    // MARK: - Keyboard Mode Switching
-    @objc func switchToNumbers() { keyboardMode = .numbers; setupBasicKeys() }
-    @objc func switchToSymbols() { keyboardMode = .symbols; setupBasicKeys() }
-    @objc func switchToAlphabet() { keyboardMode = .alphabet; setupBasicKeys() }
-
     
-    // MARK: - AI Toolbar
-    func setupAIToolbar() {
-        aiToolbar = UIView()
-        aiToolbar.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.1)
-        aiToolbar.layer.cornerRadius = 10
-        aiToolbar.isHidden = true
-        keyboardView.addSubview(aiToolbar)
-        aiToolbar.translatesAutoresizingMaskIntoConstraints = false
+    private func setupAlwaysVisibleToggles() {
+        // Container at top or bottom (choose your position)
+        let container = UIStackView()
+        container.axis = .horizontal
+        container.spacing = 12
+        container.alignment = .center
+        container.distribution = .fillEqually
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+        
+        // Create toggles
+        emojisToggle = createToggleButton(title: "Emojis", isOn: isEmojisEnabled, action: #selector(toggleEmojis))
+        hashtagsToggle = createToggleButton(title: "Hashtags", isOn: isHashtagsEnabled, action: #selector(toggleHashtags))
+        
+        container.addArrangedSubview(emojisToggle)
+        container.addArrangedSubview(hashtagsToggle)
+        
+        // Layout
         NSLayoutConstraint.activate([
-            aiToolbar.leftAnchor.constraint(equalTo: keyboardView.leftAnchor, constant: 10),
-            aiToolbar.rightAnchor.constraint(equalTo: keyboardView.rightAnchor, constant: -10),
-            aiToolbar.topAnchor.constraint(equalTo: keyboardView.topAnchor, constant: 10),
-            aiToolbar.heightAnchor.constraint(equalToConstant: 40)
+                container.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),  // right edge
+                container.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),     // bottom edge
+                container.widthAnchor.constraint(equalToConstant: 150),                             // width of stack
+                container.heightAnchor.constraint(equalToConstant: 50)                            // height of stack (2 buttons + spacing)
+            ])
+        
+        view.bringSubviewToFront(container)
+    }
+    
+    @objc private func toggleEmojis() {
+        isEmojisEnabled.toggle()
+        emojisToggle.backgroundColor = isEmojisEnabled ? .systemPurple : .systemGray
+    }
+
+    @objc private func toggleHashtags() {
+        isHashtagsEnabled.toggle()
+        hashtagsToggle.backgroundColor = isHashtagsEnabled ? .systemPurple : .systemGray
+    }
+
+    
+    private func setControls(hidden: Bool) {
+        emojisToggle.isHidden = hidden
+        hashtagsToggle.isHidden = hidden
+        nextKeyboardButton.isHidden = hidden
+    }
+
+    
+    
+    
+    // MARK: - Main prompt grid
+    private func setupPromptKeyboard() {
+        // Remove everything except nextKeyboardButton (if previously added)
+        view.subviews.forEach { $0.removeFromSuperview() }
+        
+        mainStack = UIStackView()
+        mainStack.axis = .vertical
+        mainStack.spacing = 12
+        mainStack.alignment = .center
+        mainStack.distribution = .fillEqually
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(mainStack)
+        
+        // build rows (2 rows x 3 columns)
+        for row in stride(from: 0, to: prompts.count, by: 3) {
+            let rowStack = UIStackView()
+            rowStack.axis = .horizontal
+            rowStack.spacing = 12
+            rowStack.distribution = .fillEqually
+            
+            for i in row..<min(row + 3, prompts.count) {
+                let button = createPromptButton(title: prompts[i])
+                rowStack.addArrangedSubview(button)
+            }
+            mainStack.addArrangedSubview(rowStack)
+        }
+        
+        NSLayoutConstraint.activate([
+            mainStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            mainStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            mainStack.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 10),
+            mainStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -10)
         ])
     }
     
-    @objc func aiButtonPressed() {
-        isAIMode.toggle()
-        aiToolbar.isHidden = !isAIMode
-        if isAIMode {
-            aiButton.backgroundColor = .purple
-            aiButton.setTitle("🤖 ON", for: .normal)
-            populateLinkedInButtons()
-        } else {
-            aiButton.backgroundColor = .systemPurple
-            aiButton.setTitle("🤖 AI", for: .normal)
-            clearAIToolbar()
-        }
+    private func createPromptButton(title: String) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.systemPurple, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        button.layer.borderWidth = 2
+        button.layer.borderColor = UIColor.systemPurple.cgColor
+        button.layer.cornerRadius = 15
+        button.backgroundColor = .clear
+//        button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20)
+        button.addTarget(self, action: #selector(promptTapped(_:)), for: .touchUpInside)
+        return button
     }
+
     
-    func populateLinkedInButtons() {
-        clearAIToolbar()
-        let suggestions = ["👏 Applaud", "👍🏽 Agree", "💬 Comment", "👀 Insight"]
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.spacing = 8
-        stack.distribution = .fillEqually
-        stack.tag = 999
-        for s in suggestions {
-            let b = UIButton(type: .system)
-            b.setTitle(s, for: .normal)
-            b.setTitleColor(.systemBlue, for: .normal)
-            b.backgroundColor = .white
-            b.layer.cornerRadius = 18
-            b.layer.borderWidth = 3
-            b.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.3).cgColor
-            b.addTarget(self, action: #selector(AIPressed(_:)), for: .touchUpInside)
-            stack.addArrangedSubview(b)
-        }
-        aiToolbar.addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
+    
+    // MARK: - Globe (Next keyboard)
+    private func setupNextKeyboardButton() {
+        nextKeyboardButton = UIButton(type: .system)
+        nextKeyboardButton.setTitle("🌐", for: .normal)
+        nextKeyboardButton.titleLabel?.font = UIFont.systemFont(ofSize: 22)
+        nextKeyboardButton.translatesAutoresizingMaskIntoConstraints = false
+        nextKeyboardButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
+        view.addSubview(nextKeyboardButton)
+        
         NSLayoutConstraint.activate([
-            stack.leftAnchor.constraint(equalTo: aiToolbar.leftAnchor, constant: 10),
-            stack.rightAnchor.constraint(equalTo: aiToolbar.rightAnchor, constant: -10),
-            stack.topAnchor.constraint(equalTo: aiToolbar.topAnchor, constant: 5),
-            stack.bottomAnchor.constraint(equalTo: aiToolbar.bottomAnchor, constant: -5)
+            nextKeyboardButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            nextKeyboardButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
+            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 44),
+            nextKeyboardButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
     
-    func clearAIToolbar() {
-        for s in aiToolbar.subviews where s.tag == 999 {
-            s.removeFromSuperview()
-        }
-    }
-    
-    
-        @objc func AIPressed(_ sender: UIButton) {
-            guard let title = sender.title(for: .normal) else { return }
-    
-            let tone = title
-                .replacingOccurrences(of: "👏 ", with: "")
-                .replacingOccurrences(of: "💬 ", with: "")
-                .replacingOccurrences(of: "👍🏽 ", with: "")
-                .replacingOccurrences(of: "👀 ", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-    
-            let defaults = UserDefaults(suiteName: "group.com.einstein.common")
-            defaults?.synchronize()
-    
-            guard let _ = defaults?.string(forKey: "LastProcessedLink"),
-                  let results = defaults?.dictionary(forKey: "LatestResult") as? [String: String],
-                  let comment = results[tone] else {
-                textDocumentProxy.insertText("❌ No processed result found.\n")
-                return
-            }
-    
-            // Clean + insert result
-            var cleaned = comment
-            if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") {
-                cleaned.removeFirst()
-                cleaned.removeLast()
-            }
-            cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
-                             .replacingOccurrences(of: "\\\"", with: " ")
-                             .replacingOccurrences(of: "\\t", with: " ")
-                             .replacingOccurrences(of: "\\\\", with: " ")
-    
-            while self.textDocumentProxy.hasText {
-                self.textDocumentProxy.deleteBackward()
-            }
-            self.textDocumentProxy.insertText(cleaned)
-            aiButtonPressed()
-        }
-
-    // MARK: - Key Actions
-    @objc func letterPressed(_ sender: UIButton) {
-        guard let letter = sender.title(for: .normal) else { return }
-        var output = letter
+    // MARK: - Prompt tapped
+    @objc private func promptTapped(_ sender: UIButton) {
+        guard let title = sender.currentTitle else { return }
         
-        if isShiftEnabled && !isCapsLock {
-            output = output.uppercased()
-            isShiftEnabled = false // reset shift after one key
-            updateKeyLabels()
-        } else if isCapsLock {
-            output = output.uppercased()
-        } else {
-            output = output.lowercased()
+        // Translated Comment -> show translate layout
+        if title == "Translate" {
+            showTranslateLayout()
+            return
+        }
+        if title == "Personalize"{
+            personalizeTapped()
+            return
         }
         
-        textDocumentProxy.insertText(output)
+        // normal prompt flow
+        startGenerationForTone(tone: title, sender: sender)
+    }
+    
+    // MARK: - Show translate layout (two pickers side-by-side + Back + Go)
+    private func showTranslateLayout() {
+        // Hide main grid
+        mainStack.isHidden = true
+        // Hide toggle buttons when showing Translate layout
+        setControls(hidden: true)
+
+        
+        // Create translate view fresh
+        translateView?.removeFromSuperview()
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+        translateView = container
+        
+        // Language picker
+        languagePicker = UIPickerView()
+        languagePicker.delegate = self
+        languagePicker.dataSource = self
+        languagePicker.translatesAutoresizingMaskIntoConstraints = false
+        languagePicker.selectRow(selectedLanguageIndex, inComponent: 0, animated: false)
+        
+        // Type picker
+        typePicker = UIPickerView()
+        typePicker.delegate = self
+        typePicker.dataSource = self
+        typePicker.translatesAutoresizingMaskIntoConstraints = false
+        typePicker.selectRow(selectedTypeIndex, inComponent: 0, animated: false)
+        
+        // Column stacks with label + picker
+        let leftStack = UIStackView(arrangedSubviews: [makeLabel("Language"), languagePicker])
+        leftStack.axis = .vertical
+        leftStack.spacing = 8
+        
+        let rightStack = UIStackView(arrangedSubviews: [makeLabel("Comment Type"), typePicker])
+        rightStack.axis = .vertical
+        rightStack.spacing = 8
+        
+        let sideBySide = UIStackView(arrangedSubviews: [leftStack, rightStack])
+        sideBySide.axis = .horizontal
+        sideBySide.spacing = 12
+        sideBySide.distribution = .fillEqually
+        sideBySide.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Buttons
+        let backButton = UIButton(type: .system)
+        backButton.setTitle("← Back", for: .normal)
+        backButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        backButton.addTarget(self, action: #selector(backToMainMenu), for: .touchUpInside)
+        
+        let go = UIButton(type: .system)
+        go.setTitle("Go", for: .normal)
+        go.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        go.layer.cornerRadius = 12
+        go.layer.borderWidth = 1
+        go.layer.borderColor = UIColor.systemPurple.cgColor
+//        go.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        go.addTarget(self, action: #selector(goPressed), for: .touchUpInside)
+        go.translatesAutoresizingMaskIntoConstraints = false
+        self.goButton = go
+
+        
+        let buttonRow = UIStackView(arrangedSubviews: [backButton, UIView(), go]) // spacer in middle
+        buttonRow.axis = .horizontal
+        buttonRow.spacing = 12
+        buttonRow.alignment = .center
+        buttonRow.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Vertical stack
+        let vstack = UIStackView(arrangedSubviews: [sideBySide, buttonRow])
+        vstack.axis = .vertical
+        vstack.spacing = 16
+        vstack.alignment = .fill
+        vstack.translatesAutoresizingMaskIntoConstraints = false
+        
+        container.addSubview(vstack)
+        
+        NSLayoutConstraint.activate([
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            vstack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            vstack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            vstack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 12),
+            vstack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -12),
+            
+            languagePicker.heightAnchor.constraint(equalToConstant: 120),
+            typePicker.heightAnchor.constraint(equalToConstant: 120)
+        ])
+        
+        // Make sure the globe button stays on top
+        view.bringSubviewToFront(nextKeyboardButton)
+    }
+    
+    private func makeLabel(_ text: String) -> UILabel {
+        let l = UILabel()
+        l.text = text
+        l.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        l.textAlignment = .center
+        return l
+    }
+    
+    @objc private func backToMainMenu() {
+        
+        translateView?.removeFromSuperview()
+        translateView = nil
+        mainStack.isHidden = false
+        
+        // Show toggle buttons again
+        setControls(hidden: false)
+    }
+    
+    // MARK: - Go pressed (start generation for translated comment)
+    @objc private func goPressed(_ sender: UIButton) {
+        // read picker selections
+        clearKeyboardText()
+        selectedLanguageIndex = languagePicker.selectedRow(inComponent: 0)
+        selectedTypeIndex = typePicker.selectedRow(inComponent: 0)
+        let language = languages[selectedLanguageIndex]
+        let type = commentTypes[selectedTypeIndex]
+        
+        // nice human-facing tone for display & also pass machine-friendly tone to backend
+        let displayTone = "Translated Comment — \(language) / \(type)"
+        
+        
+        
+        // show loading on go button
+        sender.setTitle("…", for: .normal)
+        sender.isEnabled = false
+        
+        // Begin same generation flow (sender passed so button will restore)
+        startGenerationForTone(tone: type, sender: nil, displayMessage: displayTone, language: language)
+        
+        sender.setTitle("Go", for: .normal)
+        sender.isEnabled = true
+        
+        
+    }
+    
+    @objc private func personalizeTapped() {
+        // 1. Hide main keyboard grid
+        mainStack.isHidden = true
+        
+        // 2. Remove any existing personalize view
+        personalizeView?.removeFromSuperview()
+        
+        // 3. Create container view
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+        personalizeView = container
+        
+        // 4. Tone input
+        let toneLabel = makeLabel("Tone")
+        let toneInput = UITextField()
+        toneInput.borderStyle = .roundedRect
+        toneInput.placeholder = "Professional"
+        
+        // 5. Details box
+        let detailsLabel = makeLabel("Details")
+        let detailsBox = UITextView()
+        detailsBox.isEditable = false
+        detailsBox.text = """
+        Pick a style — professional, casual, semi-formal, or technical —
+        and einsteini will rewrite your message to sound just right.
+        """
+        detailsBox.font = UIFont.systemFont(ofSize: 14)
+        detailsBox.layer.borderWidth = 1
+        detailsBox.layer.borderColor = UIColor.systemGray.cgColor
+        detailsBox.layer.cornerRadius = 8
+        detailsBox.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        
+        // 6. Buttons row
+        let backButton = UIButton(type: .system)
+        backButton.setTitle("← Back", for: .normal)
+        backButton.addTarget(self, action: #selector(backToMainMenu), for: .touchUpInside)
+        
+        let generateButton = UIButton(type: .system)
+        generateButton.setTitle("Generate", for: .normal)
+        generateButton.backgroundColor = .systemGreen
+        generateButton.setTitleColor(.white, for: .normal)
+        generateButton.layer.cornerRadius = 12
+        generateButton.addTarget(self, action: #selector(generatePersonalizedComment), for: .touchUpInside)
+        
+        let buttonsRow = UIStackView(arrangedSubviews: [backButton, UIView(), generateButton])
+        buttonsRow.axis = .horizontal
+        buttonsRow.spacing = 12
+        buttonsRow.alignment = .center
+        
+        // 7. Vertical stack
+        let vStack = UIStackView(arrangedSubviews: [toneLabel, toneInput, detailsLabel, detailsBox, buttonsRow])
+        vStack.axis = .vertical
+        vStack.spacing = 12
+        vStack.alignment = .fill
+        vStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        container.addSubview(vStack)
+        
+        // 8. Layout constraints
+        NSLayoutConstraint.activate([
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            vStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            vStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            vStack.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ])
+        
+        // Keep globe button on top
+        view.bringSubviewToFront(nextKeyboardButton)
+        
+        // Optional: store reference to tone input for later
+        personalizeToneInput = toneInput
+    }
+    
+    @objc private func generatePersonalizedComment() {
+        clearKeyboardText()
+        
+        // Get user input from tone field
+        let tone = personalizeToneInput?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Professional"
+        
+        // Send to your existing generation function
+        startGenerationForTone(
+            tone: "Personalized - \(tone)",
+            sender: nil,
+            displayMessage: "Personalized — \(tone)"
+        )
     }
 
+
     
-    func updateKeyLabels() {
-        for sub in keyboardView.subviews {
-            if let mainStack = sub as? UIStackView {
-                for case let row as UIStackView in mainStack.arrangedSubviews {
-                    for case let button as UIButton in row.arrangedSubviews {
-                        guard let title = button.title(for: .normal) else { continue }
+    // MARK: - Generation core
+    private func startGenerationForTone(tone: String, sender: UIButton?, displayMessage: String? = nil, language: String? = "English") {
+        let originalTitle = sender?.currentTitle ?? nil
+        
+        // quick tap animation if a sender (visual)
+        if let s = sender {
+            UIView.animate(withDuration: 0.08, animations: { s.alpha = 0.5 }) { _ in UIView.animate(withDuration: 0.08) { s.alpha = 1.0 } }
+            s.setTitle("…", for: .normal)
+            s.isEnabled = false
+        }
+        
+        // Clear current keyboard text and write "Generating comment for "TONE"..."
+        clearKeyboardText()
+        let display = displayMessage ?? tone
+        textDocumentProxy.insertText("Generating comment for \"\(display)\"...")
+        
+        // retrieve last link (app and extension share app group)
+        let defaults = UserDefaults(suiteName: "group.com.einstein.common")
+        let link = defaults?.string(forKey: "LastProcessedLink") ?? ""
+        
+        let authToken = defaults?.string(forKey: "loggedInEmail") ?? "not_found"
+        let commentGenerator = LinkedInCommentGenerator(authToken: authToken)
+        
+        commentGenerator.generateComment(url: link, tone: tone, includeEmoji: isEmojisEnabled, emojiText: nil, includeHashtag: isHashtagsEnabled, hashtagText: nil, language: language) { comment in
+            DispatchQueue.main.async {
+                if let comment = comment {
+                    self.clearKeyboardText()
+                    if let sharedDefaults = UserDefaults(suiteName: "group.com.einstein.common") {
+                        sharedDefaults.set([tone: comment], forKey: "LatestResult")
+                        sharedDefaults.set(link, forKey: "LastProcessedLink")
                         
-                        // Skip special keys
-                        if ["⇧","⌫","space","⏎","🌐","🤖 AI","123","#+=","ABC"].contains(title) {
-                            continue
-                        }
-                        
-                        if isCapsLock || isShiftEnabled {
-                            button.setTitle(title.uppercased(), for: .normal)
-                        } else {
-                            button.setTitle(title.lowercased(), for: .normal)
+//                         Clean comment: unescape, trim surrounding quotes
+                        var cleaned = comment
+                        cleaned = cleaned.replacingOccurrences(of: "\\n", with: " ")
+                        cleaned = cleaned.replacingOccurrences(of: "\\\"", with: "\"")
+                        cleaned = cleaned.replacingOccurrences(of: "\\t", with: " ")
+                        cleaned = cleaned.replacingOccurrences(of: "\\\\", with: " ")
+                        cleaned = cleaned.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+        
+                        // Insert final comment
+                        self.textDocumentProxy.insertText(cleaned + " ")
+        
+                        // Restore sender button (if any)
+                        if let s = sender {
+                            s.setTitle(originalTitle, for: .normal)
+                            s.isEnabled = true
                         }
                     }
                 }
             }
         }
-    }
-
-    
-    @objc func spacePressed() { textDocumentProxy.insertText(" ") }
-    @objc func deletePressed() { textDocumentProxy.deleteBackward() }
-    @objc func returnPressed() { textDocumentProxy.insertText("\n") }
-    @objc func backToSystemKeyboard() { advanceToNextInputMode() }
-    
-    func styleKeyButton(_ button: UIButton) {
-        button.backgroundColor = .white
-    
-        let title = button.title(for: .normal)
         
-        if "🤖 AI" == title { button.backgroundColor = .systemPurple}
-        else
-        if ["⇧","⌫","space","⏎","🌐","123","#+=","ABC"].contains(title) {
-                button.backgroundColor = .systemGray3
+ 
+        
+    }
+    
+    // MARK: - Clear keyboard text (delete chars before cursor)
+    
+    private func clearKeyboardText() {
+        if let before = textDocumentProxy.documentContextBeforeInput, !before.isEmpty {
+            textDocumentProxy.deleteBackward()
+            // Call recursively
+            clearKeyboardText()
         }
-            
-        button.layer.cornerRadius = 6   // rounded edges
-        button.layer.masksToBounds = false   // 🔥 allow shadow outside bounds
-        button.layer.borderWidth = 0.5
-        button.layer.borderColor = UIColor.clear.cgColor
-        
-        
-        // stronger, thicker shadow
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOpacity = 0.3   // 0.3–0.5 looks natural (not too dark)
-        button.layer.shadowOffset = CGSize(width: 0, height: 3)  // more depth
-        button.layer.shadowRadius = 4      // blur spread
-        
-        button.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        
-        // text style
-        button.setTitleColor(.black, for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 18)
     }
 
+    
+  
+    
+    // MARK: - UIPicker DataSource / Delegate
+    func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return pickerView == languagePicker ? languages.count : commentTypes.count
+    }
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return pickerView == languagePicker ? languages[row] : commentTypes[row]
+    }
 }
+

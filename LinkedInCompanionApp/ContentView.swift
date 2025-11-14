@@ -10,6 +10,10 @@ import UserNotifications
 import GoogleSignInSwift
 import GoogleSignIn
 import AuthenticationServices
+import StoreKit
+import Combine
+import Foundation
+
 
 
 // MARK: - Splash View
@@ -50,13 +54,13 @@ class AppState: ObservableObject {
                window.overrideUserInterfaceStyle = darkMode ? .dark : .light
            }
 
-           UserDefaults.standard.set(darkMode, forKey: "darkMode")
+           DualDefaults.set(darkMode, forKey: "darkMode")
            print("Dark Mode \(darkMode ? "enabled" : "disabled")")
        }
 
        // MARK: - Notifications
        private func updateNotifications() {
-           UserDefaults.standard.set(enableNotifications, forKey: "enableNotifications")
+           DualDefaults.set(enableNotifications, forKey: "enableNotifications")
 
            if enableNotifications {
                // Request permission if needed
@@ -73,47 +77,47 @@ class AppState: ObservableObject {
 
        // MARK: - Load saved settings
        func loadSettings() {
-           darkMode = UserDefaults.standard.bool(forKey: "darkMode")
-           enableNotifications = UserDefaults.standard.bool(forKey: "enableNotifications")
+           darkMode = DualDefaults.bool(forKey: "darkMode")
+           enableNotifications = DualDefaults.bool(forKey: "enableNotifications")
        }
 
 
     init() {
-        isLoggedIn = UserDefaults.standard.string(forKey: "loggedInEmail") != nil
-        subscriptionStatus = UserDefaults.standard.string(forKey: "subscriptionStatus") ?? "Unknown"
-        remainingComments = UserDefaults.standard.integer(forKey: "remainingComments")
+        isLoggedIn = DualDefaults.string(forKey: "loggedInEmail") != nil
+        subscriptionStatus = DualDefaults.string(forKey: "subscriptionStatus") ?? "Unknown"
+        remainingComments = DualDefaults.integer(forKey: "remainingComments")
     }
 
     func logIn(email: String, name : String) {
-        UserDefaults.standard.set(name, forKey: "User_name")
-        UserDefaults.standard.set(email, forKey: "loggedInEmail")
+        DualDefaults.set(name, forKey: "User_name")
+        DualDefaults.set(email, forKey: "loggedInEmail")
         isLoggedIn = true
     }
 
     func logOut() {
-        UserDefaults.standard.removeObject(forKey: "loggedInEmail")
-        UserDefaults.standard.removeObject(forKey: "subscriptionStatus")
-        UserDefaults.standard.removeObject(forKey: "remainingComments")
+        ["loggedInEmail", "subscriptionStatus", "remainingComments"].forEach {
+                    DualDefaults.remove(forKey: $0)
+                }
         subscriptionStatus = "Unknown"
         remainingComments = 0
         isLoggedIn = false
     }
 
     var loggedInEmail: String? {
-        UserDefaults.standard.string(forKey: "loggedInEmail")
+        DualDefaults.string(forKey: "loggedInEmail")
     }
     var Username: String?{
-        UserDefaults.standard.string(forKey: "User_name")
+        DualDefaults.string(forKey: "User_name")
     }
 
     func updateSubscriptionStatus(_ status: String) {
         subscriptionStatus = status
-        UserDefaults.standard.set(status, forKey: "subscriptionStatus")
+        DualDefaults.set(status, forKey: "subscriptionStatus")
     }
 
     func updateRemainingComments(_ count: Int) {
         remainingComments = count
-        UserDefaults.standard.set(count, forKey: "remainingComments")
+        DualDefaults.set(count, forKey: "remainingComments")
     }
 }
 
@@ -273,360 +277,6 @@ struct KeyboardSetupView: View {
     }
 }
 
-
-
-
-//// MARK: - Main App View
-//struct HomeView: View {
-//    @EnvironmentObject var appState: AppState
-//    
-//    var body: some View {
-//        VStack(spacing: 24) {
-//            if let user_name = appState.Username {
-//                Text("👋 Welcome back \(user_name)")
-//                    .font(.title2)
-//            } else {
-//                Text("👋 Welcome back to")
-//                    .font(.title2)
-//            }
-//            
-//            Text("einsteini.ai")
-//                .font(.largeTitle)
-//                .fontWeight(.bold)
-//                .foregroundColor(.purple)
-//            
-//            if let email = appState.loggedInEmail {
-//                Text("Logged in as: \(email)")
-//                    .font(.subheadline)
-//                    .foregroundColor(.gray)
-//            }
-//            
-//            Text("💬 Remaining Comments: \(appState.remainingComments)")
-//                .font(.subheadline)
-//                .foregroundColor(.green)
-//            
-//            Divider().padding(.horizontal)
-//        }
-//        .navigationTitle("Home")
-//    }
-//}
-//
-//
-//struct AIAssistantView: View {
-//    @EnvironmentObject var appstate: AppState
-//    var body: some View {
-//        NavigationView {
-//            Text("✨ AI Assistant Screen")
-//                .navigationTitle("AI Assistant")
-//        }
-//    }
-//}
-//
-//struct HistoryView: View {
-//    @EnvironmentObject var appState: AppState
-//    @State private var sharedLinks: [String] = []
-//    @State private var latestResult: [String: String] = [:]
-//    @State private var lastProcessedLink: String?
-//    
-//    var body: some View {
-//        NavigationView {
-//            Text("🕒 History Screen")
-//                .navigationTitle("History")
-//            Text("History")
-//                .font(.headline)
-//
-//            if sharedLinks.isEmpty {
-//                Text("No links shared yet.")
-//                    .foregroundColor(.secondary)
-//            } else {
-//                // List of all shared links
-//                Section(header: Text("Your Library")) {
-//                    List(sharedLinks, id: \.self) { link in
-//                        Text(link)
-//                            .font(.footnote)
-//                            .foregroundColor(.blue)
-//                            .lineLimit(2)
-//                    }
-//                }
-//                
-//                // Latest API results (dictionary -> key/value list)
-//                if !latestResult.isEmpty {
-//                    Section(header: Text("Latest Results")) {
-//                        List(latestResult.sorted(by: { $0.key < $1.key }), id: \.key) { tone, comment in
-//                            VStack(alignment: .leading, spacing: 4) {
-//                                Text(tone)
-//                                    .font(.caption)
-//                                    .foregroundColor(.secondary)
-//                                Text(comment)
-//                                    .font(.footnote)
-//                                    .foregroundColor(.blue)
-//                                    .lineLimit(2)
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    Text("No processed results yet.")
-//                        .foregroundColor(.secondary)
-//                }
-//            }
-//
-//
-//            HStack {
-//                Button("🔄 Load") {
-//                    loadSharedLinks()
-//                }
-//                .padding()
-//                .background(Color.blue.opacity(0.1))
-//                .cornerRadius(8)
-//
-//                Button("🗑 Clear") {
-//                    clearSharedLinks()
-//                }
-//                .padding()
-//                .background(Color.red.opacity(0.1))
-//                .cornerRadius(8)
-//            }
-//
-//            Button("Log out") {
-//                appState.logOut()
-//            }
-//            .foregroundColor(.red)
-//
-//            Spacer()
-//            
-////            Text(try! AttributedString(markdown: "Login to Our Website [einsteini.ai](https://einsteini.ai) for subscription and other changes"))
-////                .font(.subheadline)
-////                .foregroundColor(.gray)
-//        }
-//        .padding()
-//        .onAppear {
-//            loadSharedLinks()
-//            loadSubscriptionStatus()
-//        }
-//        }
-//    func loadSharedLinks() {
-//        if let sharedDefaults = UserDefaults(suiteName: "group.com.einstein.common") {
-//            sharedDefaults.synchronize()
-//            
-//            // Load all links (history)
-//            sharedLinks = sharedDefaults.stringArray(forKey: "SharedLinks") ?? []
-//            print("✅ Accessed shared links: \(sharedLinks)")
-//            
-//            // Load last processed link
-//            lastProcessedLink = sharedDefaults.string(forKey: "LastProcessedLink")
-//            print("✅ Last processed link: \(lastProcessedLink ?? "nil")")
-//            
-//            // Load latest API results
-//            if let results = sharedDefaults.dictionary(forKey: "LatestResult") as? [String: String] {
-//                latestResult = results
-//                print("✅ Latest API results: \(results)")
-//            } else {
-//                print("⚠️ No processed results found.")
-//            }
-//            
-//        } else {
-//            print("❌ Failed to access UserDefaults with app group")
-//        }
-//    }
-//
-//    func clearSharedLinks() {
-//        if let sharedDefaults = UserDefaults(suiteName: "group.com.einstein.common") {
-//            sharedDefaults.synchronize()
-//            sharedDefaults.removeObject(forKey: "SharedLinks")
-//            sharedDefaults.removeObject(forKey: "LastProcessedLink")
-//            sharedDefaults.removeObject(forKey: "LatestResult")
-//            sharedLinks = []
-//            lastProcessedLink = ""
-//            latestResult = [:]
-//        }
-//    }
-//
-//    func loadSubscriptionStatus() {
-//        guard let email = appState.loggedInEmail else { return }
-//
-//        ApiService.shared.getSubscriptionType(email: email) { status, error in
-//            if let status = status {
-//                DispatchQueue.main.async {
-//                    appState.updateSubscriptionStatus(status)
-//                }
-//            }
-//        }
-//
-//        ApiService.shared.getRemainingComments(email: email) { count in
-//            if let count = count {
-//                DispatchQueue.main.async {
-//                    appState.updateRemainingComments(count)
-//                }
-//            }
-//        }
-//    }
-//
-//}
-//
-////struct MainView: View {
-////        @State private var selectedTab = 0
-////        @State private var showMenu = false
-////        
-////        var body: some View {
-////            TabView(selection: $selectedTab) {
-////                
-////                // Home Tab
-////                HomeView()
-////                    .tabItem {
-////                        Label("Home", systemImage: "house")
-////                    }
-////                    .tag(0)
-////                
-////                // AI Assistant Tab
-////                AIAssistantView()
-////                    .tabItem {
-////                        Label("AI Assistant", systemImage: "sparkles")
-////                    }
-////                    .tag(1)
-////                
-////                // History Tab
-////                HistoryView()
-////                    .tabItem {
-////                        Label("History", systemImage: "clock.arrow.circlepath")
-////                    }
-////                    .tag(2)
-////            }
-////            .accentColor(.purple) // active tab color
-////
-////        }
-////        
-////    }
-//struct MainView: View {
-//    @State private var selectedTab = 0
-//    @State private var showMenu = false
-//    @EnvironmentObject var appState: AppState
-//    
-//    var body: some View {
-//        ZStack {
-//            // MARK: Side Menu (always there under the main screen)
-//            SideMenuView(showMenu: $showMenu)
-//                .offset(x: showMenu ? 0 : -250) // slide in/out
-//                .zIndex(1)
-//            
-//            // MARK: Main Content with Tabs
-//            TabView(selection: $selectedTab) {
-//                
-//                NavigationView {
-//                    HomeView()
-//                        .navigationBarTitle("Home", displayMode: .inline)
-//                        .navigationBarItems(leading: menuButton)
-//                }
-//                .tabItem {
-//                    Label("Home", systemImage: "house")
-//                }
-//                .tag(0)
-//                
-//                NavigationView {
-//                    AIAssistantView()
-//                        .navigationBarTitle("AI Assistant", displayMode: .inline)
-//                        .navigationBarItems(leading: menuButton)
-//                }
-//                .tabItem {
-//                    Label("AI Assistant", systemImage: "sparkles")
-//                }
-//                .tag(1)
-//                
-//                NavigationView {
-//                    HistoryView()
-//                        .navigationBarTitle("History", displayMode: .inline)
-//                        .navigationBarItems(leading: menuButton)
-//                }
-//                .tabItem {
-//                    Label("History", systemImage: "clock.arrow.circlepath")
-//                }
-//                .tag(2)
-//            }
-//            .accentColor(.purple)
-//            .zIndex(0)
-//            .onAppear {
-//                // Always open on Home tab
-//                selectedTab = 0
-//            }
-//        }
-//    }
-//    
-//    // MARK: Hamburger Button
-//    private var menuButton: some View {
-//        Button(action: {
-//            withAnimation {
-//                showMenu.toggle()
-//            }
-//        }) {
-//            Image(systemName: "line.horizontal.3")
-//                .imageScale(.large)
-//                .foregroundColor(.purple)
-//        }
-//    }
-//}
-//
-//
-//
-//struct SideMenuView: View {
-//    @Binding var showMenu: Bool
-//    @EnvironmentObject var appState: AppState
-//
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 24) {
-//            // Profile section
-//            VStack(alignment: .leading, spacing: 8) {
-//                Circle()
-//                    .fill(Color.purple)
-//                    .frame(width: 60, height: 60)
-//                    .overlay(Text(String(appState.Username?.prefix(1) ?? "U"))
-//                                .font(.title)
-//                                .foregroundColor(.white))
-//
-//                Text(appState.Username ?? "Guest User")
-//                    .font(.headline)
-//                    .foregroundColor(.white)
-//
-//                Text(appState.loggedInEmail ?? "")
-//                    .font(.subheadline)
-//                    .foregroundColor(.gray)
-//            }
-//            .padding(.bottom, 30)
-//
-//            // Menu items
-//            menuItem(icon: "house", title: "Home")
-//            menuItem(icon: "sparkles", title: "AI Assistant")
-//            menuItem(icon: "clock.arrow.circlepath", title: "History")
-//            menuItem(icon: "person", title: "Profile")
-//            menuItem(icon: "gearshape", title: "Settings")
-//            menuItem(icon: "creditcard", title: "Subscription")
-//            menuItem(icon: "book", title: "Tutorial")
-//
-//            Spacer()
-//        }
-//        .padding()
-//        .frame(maxWidth: .infinity, alignment: .leading)
-//        .background(Color(red: 20/255, green: 22/255, blue: 37/255))
-//        .edgesIgnoringSafeArea(.all)
-//    }
-//
-//    private func menuItem(icon: String, title: String) -> some View {
-//        Button(action: {
-//            withAnimation { showMenu = false }
-//            // TODO: handle navigation
-//        }) {
-//            HStack(spacing: 16) {
-//                Image(systemName: icon)
-//                    .foregroundColor(.white)
-//                Text(title)
-//                    .foregroundColor(.white)
-//                    .font(.body)
-//            }
-//            .padding(.vertical, 8)
-//        }
-//    }
-//}
-//    
-//
-
 // ---------------------------
 // HomeView (no NavigationView here)
 // ---------------------------
@@ -663,9 +313,32 @@ struct HomeView: View {
                 Divider().padding(.horizontal)
             }
             .padding()
+            .onAppear(){
+                self.loadSubscriptionStatus()
+            }
             // navigationTitle will be set by the NavigationView in MainView
         }
     }
+    func loadSubscriptionStatus() {
+        guard let email = appState.loggedInEmail else { return }
+
+        ApiService.shared.getSubscriptionType(email: email) { status, error in
+            if let status = status {
+                DispatchQueue.main.async {
+                    appState.updateSubscriptionStatus(status)
+                }
+            }
+        }
+
+        ApiService.shared.getRemainingComments(email: email) { count in
+            if let count = count {
+                DispatchQueue.main.async {
+                    appState.updateRemainingComments(count)
+                }
+            }
+        }
+    }
+
 
 }
 
@@ -697,6 +370,221 @@ struct AIAssistantView: View {
         .padding()
     }
 }
+
+
+@MainActor
+final class StoreViewModel: ObservableObject {
+    private let productIdentifier = "com.einsteini.linkedInCompanion.300comments"
+    
+    @Published var product: Product?
+    @Published var isPurchased: Bool = false
+    @Published var errorMessage: String? = nil
+    
+    var onPaymentSuccess: (() -> Void)? = nil
+    
+    init(){
+        Task {
+            await loadProduct()
+            await updatePurchaseStatus()
+        }
+        listenForTransactions()
+    }
+    
+    func loadProduct() async {
+        do {
+            if let loaded = try await Product.products(for: [productIdentifier]).first {
+                product = loaded
+            }
+        } catch {
+            errorMessage = "Failed to load product: \(error.localizedDescription)"
+        }
+    }
+    
+    func purchase() async {
+        guard let product else { return }
+        
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verificationResult):
+                switch verificationResult {
+                case .verified(let transaction):
+                    await transaction.finish()
+                    await updatePurchaseStatus()
+                    errorMessage = nil
+                    onPaymentSuccess?()
+                case .unverified(_, let verificationError):
+                    errorMessage = "Purchase verification failed: \(verificationError.localizedDescription)"
+                }
+            case .userCancelled, .pending:
+                // No error message needed for user cancelled or pending
+                break
+            @unknown default:
+                errorMessage = "Unknown purchase result."
+            }
+        } catch {
+            errorMessage = "Purchase failed: \(error.localizedDescription)"
+        }
+    }
+    
+    func updatePurchaseStatus() async {
+        if let result = await Transaction.latest(for: productIdentifier) {
+            switch result {
+            case .verified(let transaction):
+                isPurchased = (transaction.revocationDate == nil)
+            default:
+                isPurchased = false
+            }
+        } else {
+            isPurchased = false
+        }
+        errorMessage = nil
+    }
+    
+    func restorePurchases() async {
+        do {
+            try await AppStore.sync()
+            await updatePurchaseStatus()
+            errorMessage = nil
+        } catch {
+            errorMessage = "Restore failed: \(error.localizedDescription)"
+        }
+    }
+    
+    private func listenForTransactions() {
+        Task{
+            for await update in Transaction.updates{
+                if case .verified(let transaction) = update,
+                   transaction.productID == productIdentifier {
+                    await transaction.finish()
+                    await updatePurchaseStatus()
+                }
+            }
+        }
+    }
+}
+
+
+// ---------------------------
+// SubscriptionView (new view)
+// ---------------------------
+struct SubscriptionView: View {
+    @StateObject private var storeVM = StoreViewModel()
+
+    private static func updateUserData() {
+        // Retrieve email from stored defaults (try multiple keys used in this app)
+        let defaults = UserDefaults.standard
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? defaults.string(forKey: "user_email")
+            ?? defaults.string(forKey: "userEmail")
+
+        guard let email = email, !email.isEmpty else {
+            print("[Subscription] Cannot increase comments: missing email")
+            return
+        }
+
+        guard let url = URL(string: "http://backend.einsteini.ai/increaseComments") else {
+            print("[Subscription] Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload: [String: Any] = [
+            "email": email,
+            "increment": 300
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            print("[Subscription] Failed to encode payload: \(error.localizedDescription)")
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("[Subscription] Increase comments request failed: \(error.localizedDescription)")
+                return
+            }
+
+            if let http = response as? HTTPURLResponse {
+                let status = http.statusCode
+                if status == 200 {
+                    print("[Subscription] Successfully increased comments by 300 for \(email)")
+                } else {
+                    let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? "<no body>"
+                    print("[Subscription] Server responded with status \(status): \(body)")
+                }
+            } else {
+                print("[Subscription] Invalid response")
+            }
+        }.resume()
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text("Subscription Plans")
+                .font(.title)
+                .bold()
+                .padding(.top)
+            
+            if let errorMessage = storeVM.errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(red: 1.0, green: 0.85, blue: 0.85))
+                    .cornerRadius(8)
+            }
+            
+            if let product = storeVM.product {
+                Text(product.displayName)
+                    .font(.headline)
+                Text(product.description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Text(product.displayPrice)
+                    .font(.title2)
+                    .foregroundColor(.purple)
+                if storeVM.isPurchased {
+                    Text("Purchased ✅")
+                        .foregroundColor(.green)
+                    Button("Restore Purchases") {
+                        Task {
+                            await storeVM.restorePurchases()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button("Subscribe") {
+                        Task { await storeVM.purchase() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Restore Purchases") {
+                        Task {
+                            await storeVM.restorePurchases()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                ProgressView("Loading...")
+                Text("Try Later")
+            }
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            storeVM.onPaymentSuccess = {
+                SubscriptionView.updateUserData()
+            }
+        }
+    }
+}
+
 
 // ---------------------------
 // HistoryView (cleaned & methods inside struct)
@@ -767,7 +655,6 @@ struct HistoryView: View {
         }
         .onAppear {
             loadSharedLinks()
-            loadSubscriptionStatus()
         }
     }
 
@@ -797,59 +684,51 @@ struct HistoryView: View {
         }
     }
 
-    func loadSubscriptionStatus() {
-        guard let email = appState.loggedInEmail else { return }
-
-        ApiService.shared.getSubscriptionType(email: email) { status, error in
-            if let status = status {
-                DispatchQueue.main.async {
-                    appState.updateSubscriptionStatus(status)
-                }
-            }
-        }
-
-        ApiService.shared.getRemainingComments(email: email) { count in
-            if let count = count {
-                DispatchQueue.main.async {
-                    appState.updateRemainingComments(count)
-                }
-            }
-        }
-    }
 }
 
 // ---------------------------
 // SettingsView - settings tab
 // ---------------------------
 
-
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+    @State private var showDeleteSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            
             Toggle("Enable Notifications", isOn: $appState.enableNotifications)
             Toggle("Dark Mode", isOn: $appState.darkMode)
             
-            
             Divider()
-            HStack{
-                Image(systemName: "rectangle.portrait.and.arrow.right").foregroundColor(.red)
-                Button("Log Out") {
-                    appState.logOut()
-                }
-                .foregroundColor(.red)
-            }
-            HStack{
-                Image(systemName: "trash").foregroundColor(.red)
-                Button("Delete Account"){
-                    let link: String?
-                    link = "https://einsteini.ai"
-                    if let urlString = link, let url = URL(string: urlString) {
-                        // Open external link
+            
+            VStack (alignment: .leading, spacing: 12) {
+                Text("SUBSCRIPTION")
+                    .font(.headline)
+                Text("Purchases and subscription management occur on our website.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button(action: {
+                    if let url = URL(string: "https://app.einsteini.ai/pricing") {
                         UIApplication.shared.open(url)
                     }
+                }) {
+                    Text("Manage Subscription on Web")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+            }
+            
+            Text("DANGER ZONE")
+                .font(.headline)
+                .foregroundColor(.red)
+            
+            HStack {
+                Image(systemName: "trash").foregroundColor(.red)
+                Button("Delete Account") {
+                    showDeleteSheet = true
                 }
                 .foregroundColor(.red)
             }
@@ -857,15 +736,58 @@ struct SettingsView: View {
         }
         .padding()
         .navigationTitle("Settings")
+        .sheet(isPresented: $showDeleteSheet) {
+            DeleteInfoSheet()
+                .presentationDetents([.medium, .large]) // makes it look like popup
+        }
     }
 }
+
+struct DeleteInfoSheet: View {
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Important Instructions")
+                        .font(.title2).bold()
+                    
+                    Text("• After deleting your account, you cannot recover it.")
+                    Text("• You will lose access to your data and history.")
+                    Text("• You can permanently delete your account on the web using the link below.")
+
+                    Spacer(minLength: 30)
+
+                    Button(action: {
+                        // IMPORTANT: This must link directly to the exact deletion page, not a generic page.
+                        if let url = URL(string: "https://app.einsteini.ai/account/delete") {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
+                        Text("Go to Account Deletion")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Delete Account")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+
+
 
 // ---------------------------
 // SideMenuView - now accepts selectedTab binding
 // ---------------------------
 struct SideMenuView: View {
     @Binding var showMenu: Bool            // controls slide-in on small screens
-    @Binding var selectedTab: Int         // 0 = Home, 1 = AI, 2 = History
+    @Binding var selectedTab: Int         // 0 = Home, 1 = AI, 2 = History, 3=Settings, 4=Subscription
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -893,6 +815,7 @@ struct SideMenuView: View {
             menuItem(icon: "house", title: "Home", index: 0)
             menuItem(icon: "sparkles", title: "AI Assistant", index: 1)
             menuItem(icon: "clock.arrow.circlepath", title: "History", index: 2)
+            menuItem(icon: "cart", title: "Subscription", index: 4)
             menuItem(icon: "gearshape", title: "Settings", index: 3)
 
             Divider().background(Color.white.opacity(0.2))
@@ -907,9 +830,6 @@ struct SideMenuView: View {
                 }
                 .foregroundColor(.red)
             }
-            
-            menuItem(icon: "trash", title: "Delete Account", link: "https://einsteini.ai", color: .red ).foregroundColor(.red)
-
             Spacer()
         }
         .padding()
@@ -951,7 +871,7 @@ struct SideMenuView: View {
 // MainView - adaptive layout
 // ---------------------------
 struct MainView: View {
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0
     @State private var showMenu = false
     @EnvironmentObject var appState: AppState
 
@@ -1018,20 +938,36 @@ struct MainView: View {
                             Label("History", systemImage: "clock.arrow.circlepath")
                         }
                         .tag(2)
+                        
                         NavigationView {
-                                SettingsView()
-                                    .navigationTitle("⚙️ Settings")
-                                    .toolbar {
-                                        ToolbarItem(placement: .navigationBarLeading) {
-                                            if !isWide { menuButton }
-                                        }
+                            SettingsView()
+                                .navigationTitle("⚙️ Settings")
+                                .toolbar {
+                                    ToolbarItem(placement: .navigationBarLeading) {
+                                        if !isWide { menuButton }
                                     }
-                            }
-                            .applyNavigationStyle()
-                            .tabItem {
-                                Label("Settings", systemImage: "gearshape")
-                            }
-                            .tag(3)
+                                }
+                        }
+                        .applyNavigationStyle()
+                        .tabItem {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        .tag(3)
+                        
+                        NavigationView {
+                            SubscriptionView()
+                                .navigationTitle("Subscription")
+                                .toolbar {
+                                    ToolbarItem(placement: .navigationBarLeading) {
+                                        if !isWide { menuButton }
+                                    }
+                                }
+                        }
+                        .applyNavigationStyle()
+                        .tabItem {
+                            Label("Subscription", systemImage: "cart")
+                        }
+                        .tag(4)
                     }
                     .accentColor(.purple)
 
@@ -1088,296 +1024,10 @@ extension View {
 }
 
 
-//// ---------------------------
-//// MainView - adaptive layout
-//// ---------------------------
-//struct MainView: View {
-//    @State private var selectedTab = 1
-//    @State private var showMenu = false
-//    @EnvironmentObject var appState: AppState
-//
-//    var body: some View {
-//        GeometryReader { geo in
-//            let isWide = geo.size.width >= 700
-//
-//            HStack(spacing: 0) {
-//                if isWide {
-//                    // Permanent sidebar on wide screens
-//                    SideMenuView(showMenu: .constant(true), selectedTab: $selectedTab)
-//                        .frame(width: 260)
-//                        .transition(.move(edge: .leading))
-//                }
-//
-//                ZStack {
-//                    // Main tabs (each tab is wrapped in a NavigationView so it has a nav bar)
-//                    TabView(selection: $selectedTab) {
-//
-//                        NavigationView {
-//                            HomeView()
-//                                .navigationTitle("Home")
-//                                .toolbar {
-//                                    ToolbarItem(placement: .navigationBarLeading) {
-//                                        // Only show hamburger on compact screens
-//                                        if !isWide {
-//                                            menuButton
-//                                        }
-//                                    }
-//                                }
-//                        }
-//                        .tabItem {
-//                            Label("Home", systemImage: "house")
-//                        }
-//                        .tag(0)
-//
-//                        NavigationView {
-//                            AIAssistantView()
-//                                .navigationTitle("AI Assistant")
-//                                .toolbar {
-//                                    ToolbarItem(placement: .navigationBarLeading) {
-//                                        if !isWide { menuButton }
-//                                    }
-//                                }
-//                        }
-//                        .tabItem {
-//                            Label("AI Assistant", systemImage: "sparkles")
-//                        }
-//                        .tag(1)
-//
-//                        NavigationView {
-//                            HistoryView()
-//                                .navigationTitle("History")
-//                                .toolbar {
-//                                    ToolbarItem(placement: .navigationBarLeading) {
-//                                        if !isWide { menuButton }
-//                                    }
-//                                }
-//                        }
-//                        .tabItem {
-//                            Label("History", systemImage: "clock.arrow.circlepath")
-//                        }
-//                        .tag(2)
-//                    }
-//                    .accentColor(.purple)
-//
-//                    // Overlay for slide-in menu on compact screens
-//                    if !isWide {
-//                        Color.black.opacity(showMenu ? 0.3 : 0)
-//                            .ignoresSafeArea()
-//                            .animation(.easeInOut, value: showMenu)
-//                            .onTapGesture {
-//                                withAnimation { showMenu = false }
-//                            }
-//
-//                        HStack {
-//                            if showMenu {
-//                                SideMenuView(showMenu: $showMenu, selectedTab: $selectedTab)
-//                                    .frame(width: 260)
-//                                    .transition(.move(edge: .leading))
-//                            }
-//                            Spacer()
-//                        }
-//                        .animation(.easeInOut, value: showMenu)
-//                    }
-//                } // ZStack
-//            } // HStack
-//            .onAppear {
-//                // always start on Home tab
-//                selectedTab = 0
-//            }
-//        } // GeometryReader
-//    }
-//
-//    private var menuButton: some View {
-//        Button(action: {
-//            withAnimation { showMenu.toggle() }
-//        }) {
-//            Image(systemName: "line.horizontal.3")
-//                .imageScale(.large)
-//                .foregroundColor(.purple)
-//        }
-//    }
-//}
-
-    
-    
-//struct MainAppView: View {
-//    @EnvironmentObject var appState: AppState
-//    @State private var sharedLinks: [String] = []
-//    @State private var latestResult: [String: String] = [:]
-//    @State private var lastProcessedLink: String?
-//    @State private var showApiTest = false
-//    
-//    var body: some View {
-//        
-//        VStack(spacing: 24) {
-//            if let user_name = appState.Username {
-//                Text("👋 Welcome back \(user_name)")
-//                    .font(.title2)
-//            }
-//            else{
-//                Text("👋 Welcome back to")
-//                    .font(.title2)
-//            }
-//            
-//            
-//            Text("einsteini.ai")
-//                .font(.largeTitle)
-//                .fontWeight(.bold)
-//                .foregroundColor(.purple)
-//            
-//            if let email = appState.loggedInEmail {
-//                Text("Logged in as: \(email)")
-//                    .font(.subheadline)
-//                    .foregroundColor(.gray)
-//            }
-//            
-//            Group {
-//                //                Text("📦 Subscription Status: \(appState.subscriptionStatus)")
-//                //                    .font(.subheadline)
-//                //                    .foregroundColor(.blue)
-//                
-//                Text("💬 Remaining Comments: \(appState.remainingComments)")
-//                    .font(.subheadline)
-//                    .foregroundColor(.green)
-//            }
-//            
-//            Divider().padding(.horizontal)
-//            
-//            Text("History")
-//                .font(.headline)
-//            
-//            if sharedLinks.isEmpty {
-//                Text("No links shared yet.")
-//                    .foregroundColor(.secondary)
-//            } else {
-//                // List of all shared links
-//                Section(header: Text("Your Library")) {
-//                    List(sharedLinks, id: \.self) { link in
-//                        Text(link)
-//                            .font(.footnote)
-//                            .foregroundColor(.blue)
-//                            .lineLimit(2)
-//                    }
-//                }
-//                
-//                // Latest API results (dictionary -> key/value list)
-//                if !latestResult.isEmpty {
-//                    Section(header: Text("Latest Results")) {
-//                        List(latestResult.sorted(by: { $0.key < $1.key }), id: \.key) { tone, comment in
-//                            VStack(alignment: .leading, spacing: 4) {
-//                                Text(tone)
-//                                    .font(.caption)
-//                                    .foregroundColor(.secondary)
-//                                Text(comment)
-//                                    .font(.footnote)
-//                                    .foregroundColor(.blue)
-//                                    .lineLimit(2)
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    Text("No processed results yet.")
-//                        .foregroundColor(.secondary)
-//                }
-//            }
-//            
-//            
-//            HStack {
-//                Button("🔄 Load") {
-//                    loadSharedLinks()
-//                }
-//                .padding()
-//                .background(Color.blue.opacity(0.1))
-//                .cornerRadius(8)
-//                
-//                Button("🗑 Clear") {
-//                    clearSharedLinks()
-//                }
-//                .padding()
-//                .background(Color.red.opacity(0.1))
-//                .cornerRadius(8)
-//            }
-//            
-//            Button("Log out") {
-//                appState.logOut()
-//            }
-//            .foregroundColor(.red)
-//            
-//            Spacer()
-//            
-//            //            Text(try! AttributedString(markdown: "Login to Our Website [einsteini.ai](https://einsteini.ai) for subscription and other changes"))
-//            //                .font(.subheadline)
-//            //                .foregroundColor(.gray)
-//        }
-//        .padding()
-//        .onAppear {
-//            loadSharedLinks()
-//            loadSubscriptionStatus()
-//        }
-//    }
-//    
-//    func loadSharedLinks() {
-//        if let sharedDefaults = UserDefaults(suiteName: "group.com.einstein.common") {
-//            sharedDefaults.synchronize()
-//            
-//            // Load all links (history)
-//            sharedLinks = sharedDefaults.stringArray(forKey: "SharedLinks") ?? []
-//            print("✅ Accessed shared links: \(sharedLinks)")
-//            
-//            // Load last processed link
-//            lastProcessedLink = sharedDefaults.string(forKey: "LastProcessedLink")
-//            print("✅ Last processed link: \(lastProcessedLink ?? "nil")")
-//            
-//            // Load latest API results
-//            if let results = sharedDefaults.dictionary(forKey: "LatestResult") as? [String: String] {
-//                latestResult = results
-//                print("✅ Latest API results: \(results)")
-//            } else {
-//                print("⚠️ No processed results found.")
-//            }
-//            
-//        } else {
-//            print("❌ Failed to access UserDefaults with app group")
-//        }
-//    }
-//    
-//    func clearSharedLinks() {
-//        if let sharedDefaults = UserDefaults(suiteName: "group.com.einstein.common") {
-//            sharedDefaults.synchronize()
-//            sharedDefaults.removeObject(forKey: "SharedLinks")
-//            sharedDefaults.removeObject(forKey: "LastProcessedLink")
-//            sharedDefaults.removeObject(forKey: "LatestResult")
-//            sharedLinks = []
-//            lastProcessedLink = ""
-//            latestResult = [:]
-//        }
-//    }
-//    
-//    func loadSubscriptionStatus() {
-//        guard let email = appState.loggedInEmail else { return }
-//        
-//        ApiService.shared.getSubscriptionType(email: email) { status, error in
-//            if let status = status {
-//                DispatchQueue.main.async {
-//                    appState.updateSubscriptionStatus(status)
-//                }
-//            }
-//        }
-//        
-//        ApiService.shared.getRemainingComments(email: email) { count in
-//            if let count = count {
-//                DispatchQueue.main.async {
-//                    appState.updateRemainingComments(count)
-//                }
-//            }
-//        }
-//    }
-//}
-    
-
 struct LoginView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authService: AuthService
+    
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
@@ -1554,13 +1204,13 @@ struct LoginView: View {
                 
                 if responseData["success"] as? Bool == true {
                     if let customerId = responseData["customerId"] as? String {
-                        UserDefaults.standard.set(customerId, forKey: "auth_token")
+                        DualDefaults.set(customerId, forKey: "auth_token")
                         print("Auth token (customerId) saved successfully")
                     }
 
                     // ✅ You requested this exact code:
-                    UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                    UserDefaults.standard.set(email, forKey: "userEmail")
+                    DualDefaults.set(true, forKey: "isLoggedIn")
+                    DualDefaults.set(email, forKey: "userEmail")
 
                     completion([
                         "success": true,
@@ -1709,6 +1359,7 @@ struct ContentView: View {
                 } else {
                     LoginView()
                         .environmentObject(appState)
+                        .environmentObject(AuthService())
                 }
             }
         }
@@ -1725,3 +1376,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
