@@ -343,31 +343,853 @@ struct HomeView: View {
 }
 
 // ---------------------------
-// AIAssistantView (plain content)
+// AIAssistantView (REPLACED)
 // ---------------------------
 struct AIAssistantView: View {
-    @EnvironmentObject var appState: AppState
-
+    enum Tab: String, CaseIterable, Identifiable {
+        //case analyse = "Analyse Post"
+        case create = "Create Post"
+        //case about = "About Me"
+        var id: String { rawValue }
+    }
+    
+    @State private var selectedTab: Tab = .create
+    
     var body: some View {
         VStack(spacing: 16) {
-            Text("✨ AI Assistant Screen")
-                .font(.title2)
-            Image(systemName: "timer") // Use a system icon
-                .font(.largeTitle)
-                .foregroundColor(.secondary)
+            Picker("AI Tabs", selection: $selectedTab) {
+                ForEach(Tab.allCases) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
             
-            Text("Something great is on its way.💪🏽")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            
-            Text("We're working hard to bring you a new feature. Check back soon!")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            Spacer()
+            switch selectedTab {
+//            case .analyse:
+//                AnalysePostView()
+            case .create:
+                CreatePostView()
+//            case .about:
+//                AboutMeView()
+            }
+            Spacer(minLength: 0)
         }
         .padding()
+    }
+}
+
+// MARK: - Shared UI Helpers
+private struct SectionCard<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(.headline)
+            content
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+}
+
+private struct OutputArea: View {
+    let text: String
+    let isLoading: Bool
+    let error: String?
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Generating...")
+                }
+            }
+            if let error = error, !error.isEmpty {
+                Text(error)
+                    .foregroundColor(.red)
+            }
+            if !text.isEmpty {
+                TextEditor(text: .constant(text))
+                    .frame(minHeight: 140)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
+                Button {
+                    UIPasteboard.general.string = text
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+    }
+}
+
+// MARK: - Enums
+private enum AITone: String, CaseIterable, Identifiable {
+    case professional = "Professional"
+    case friendly = "Friendly"
+    case bold = "Bold"
+    case neutral = "Neutral"
+    case humorous = "Humorous"
+    var id: String { rawValue }
+}
+
+
+
+private enum PostLength: String, CaseIterable, Identifiable {
+    case short = "Short"
+    case medium = "Medium"
+    case long = "Long"
+    var id: String { rawValue }
+}
+
+private enum SummaryType: String, CaseIterable, Identifiable {
+    case concise = "Concise"
+    case brief = "Brief"
+    case detailed = "Detailed"
+    var id: String { rawValue }
+}
+
+private enum Language: String, CaseIterable, Identifiable {
+    case english = "English"
+    case spanish = "Spanish"
+    case french = "French"
+    case german = "German"
+    case hindi = "Hindi"
+    case japanese = "Japanese"
+    var id: String { rawValue }
+}
+
+// MARK: - Analyse Post
+private final class AnalysePostViewModel: ObservableObject {
+    @Published var url: String = ""
+    @Published var isValidURL: Bool = false
+    @Published var isAnalyzing: Bool = false
+    @Published var analysisError: String? = nil
+    @Published var postPreview: String = "" // content preview
+    
+    // Action state
+    enum Action { case none, comment, translate, summarise }
+    @Published var selectedAction: Action = .none
+    
+    // Inputs
+    @Published var commentOptions: String = ""
+    @Published var tone: AITone = .professional
+    @Published var selectedLanguage: Language = .english
+    @Published var summaryType: SummaryType = .concise
+    
+    // Output
+    @Published var isGenerating: Bool = false
+    @Published var generationError: String? = nil
+    @Published var output: String = ""
+    
+    // URL validation
+    func validateURL(_ text: String) {
+        url = text
+        let pattern = #"^https?:\/\/(www\.)?linkedin\.com\/.*$"#
+        isValidURL = text.range(of: pattern, options: .regularExpression) != nil
+    }
+    
+    @MainActor
+    func analyze() async {
+        guard isValidURL else { return }
+        isAnalyzing = true
+        analysisError = nil
+        postPreview = ""
+        selectedAction = .none
+        output = ""
+        generationError = nil
+        
+        // Use LinkedInCommentGenerator scraping to fetch content preview
+        let email = DualDefaults.string(forKey: "loggedInEmail") ?? UserDefaults.standard.string(forKey: "userEmail")
+        let generator = LinkedInCommentGenerator(authToken: email)
+        await withCheckedContinuation { continuation in
+            generator.scrapeLinkedInPost(url: url) { postData in
+                DispatchQueue.main.async {
+                    self.isAnalyzing = false
+                    if let data = postData, !data.content.lowercased().hasPrefix("error:") {
+                        //
+                        var t = data.content
+                        
+                        // 1. Remove HTML tags
+                        t = t.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+                        
+                        // 2. Remove control characters
+                        t = String(t.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) })
+                        
+                        // 3. Remove common LinkedIn UI tokens
+                        let tokens = [
+                            "Report this post", "Report this comment",
+                            "Like", "Comment", "Share", "Copy",
+                            "View Profile", "Connect", "See more comments",
+                            "To view or add a comment, sign in",
+                            "Reactions", "followers", "Posts", "Articles","\nShow less","Show more\n\"",
+                        ]
+                        
+                        for token in tokens {
+                            t = t.replacingOccurrences(of: token, with: " ", options: .caseInsensitive)
+                        }
+                        t = t.replacingOccurrences(of: "\\s+\n", with: " ")
+                        
+                        // 4. Collapse whitespace
+                        t = t.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                        //
+                        self.postPreview = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                    } else {
+                        self.analysisError = "Failed to analyze post. Please check the link and try again."
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func generateForSelectedAction() async {
+        guard !postPreview.isEmpty else {
+            generationError = "Please analyze a post first."
+            return
+        }
+        isGenerating = true
+        generationError = nil
+        output = ""
+        
+        // Call backend endpoints via LinkedInCommentGenerator
+        do {
+            switch selectedAction {
+            case .comment:
+                output = try await generateComment()
+                await decrementCreditIfSuccess()
+            case .translate:
+                output = try await generateTranslation()
+                await decrementCreditIfSuccess()
+            case .summarise:
+                output = try await generateSummary()
+                await decrementCreditIfSuccess()
+            case .none:
+                generationError = "Select an action."
+            }
+        } catch {
+            generationError = error.localizedDescription
+        }
+        isGenerating = false
+    }
+    
+    private func generateComment() async throws -> String {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        let generator = LinkedInCommentGenerator(authToken: email)
+        
+        let trimmed = String(postPreview.prefix(1200))
+        let prompt = "Generate a \(tone.rawValue.lowercased()) tone comment for a LinkedIn post: \(trimmed)"
+        
+        return try await withCheckedThrowingContinuation { cont in
+            generator.generatePersonalizedComment(prompt: prompt, email: email, tone: tone.rawValue, toneDetails: commentOptions) { response in
+                DispatchQueue.main.async {
+                    guard let response = response else {
+                        cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                        return
+                    }
+                    cont.resume(returning: self.cleanAPIString(response))
+                }
+            }
+        }
+    }
+    
+    private func generateTranslation() async throws -> String {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        let generator = LinkedInCommentGenerator(authToken: email)
+        let text = String(postPreview.prefix(2000))
+        return try await withCheckedThrowingContinuation { cont in
+            generator.translate(text: text, targetLanguage: selectedLanguage.rawValue, email: email) { response in
+                DispatchQueue.main.async {
+                    guard let response = response else {
+                        cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                        return
+                    }
+                    cont.resume(returning: self.cleanAPIString(response))
+                }
+            }
+        }
+    }
+    
+    private func generateSummary() async throws -> String {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        let generator = LinkedInCommentGenerator(authToken: email)
+        let text = String(postPreview.prefix(4000))
+        return try await withCheckedThrowingContinuation { cont in
+            generator.summarize(text: text, style: summaryType.rawValue, email: email) { response in
+                DispatchQueue.main.async {
+                    guard let response = response else {
+                        cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                        return
+                    }
+                    cont.resume(returning: self.cleanAPIString(response))
+                }
+            }
+        }
+    }
+    
+    // Decrement 1 credit and refresh remaining count
+    @MainActor
+    private func decrementCreditIfSuccess() async {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        guard let email = email, !email.isEmpty else { return }
+        let generator = LinkedInCommentGenerator(authToken: email)
+        await withCheckedContinuation { cont in
+            generator.increaseComments(email: email, increment: -1) { _ in
+                // refresh count
+                ApiService.shared.getRemainingComments(email: email) { _ in
+                    cont.resume()
+                }
+            }
+        }
+    }
+    
+    private func cleanAPIString(_ s: String) -> String {
+        var t = s
+        t = t.replacingOccurrences(of: "\\n", with: "\n")
+        t = t.replacingOccurrences(of: "\\t", with: " ")
+        t = t.replacingOccurrences(of: "\\\"", with: "\"")
+        t = t.replacingOccurrences(of: "\\\\", with: "\\")
+        t = t.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+        return t
+    }
+}
+
+private struct AnalysePostView: View {
+    @StateObject private var vm = AnalysePostViewModel()
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                SectionCard(title: "Analyse LinkedIn Post") {
+                    TextField("Paste LinkedIn post URL", text: Binding(
+                        get: { vm.url },
+                        set: { vm.validateURL($0) }
+                    ))
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .keyboardType(.URL)
+                    .textFieldStyle(.roundedBorder)
+                    
+                    Button {
+                        Task { await vm.analyze() }
+                    } label: {
+                        HStack {
+                            if vm.isAnalyzing { ProgressView() }
+                            Text("Analyze")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!vm.isValidURL || vm.isAnalyzing)
+                    
+                    if let error = vm.analysisError {
+                        Text(error).foregroundColor(.red)
+                    }
+                    
+                    if !vm.postPreview.isEmpty {
+                        Text("Post Preview")
+                            .font(.subheadline).bold()
+                        TextEditor(text: .constant(vm.postPreview))
+                            .frame(minHeight: 120)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
+                        
+                        HStack {
+                            actionButton("Comment", systemImage: "text.bubble", action: { vm.selectedAction = .comment })
+                            actionButton("Translate", systemImage: "character.book.closed", action: { vm.selectedAction = .translate })
+                            actionButton("Summarise", systemImage: "list.bullet.rectangle", action: { vm.selectedAction = .summarise })
+                        }
+                    }
+                }
+                
+                // Action-specific UI
+                switch vm.selectedAction {
+                case .comment:
+                    SectionCard(title: "Generate Comment") {
+                        TextField("Comment Options (optional)", text: $vm.commentOptions)
+                            .textFieldStyle(.roundedBorder)
+                        
+                        Picker("Tone", selection: $vm.tone) {
+                            ForEach(AITone.allCases) { t in
+                                Text(t.rawValue).tag(t)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Button {
+                            Task { await vm.generateForSelectedAction() }
+                        } label: {
+                            HStack {
+                                if vm.isGenerating { ProgressView() }
+                                Text("Generate Comment")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.isGenerating || vm.postPreview.isEmpty)
+                        
+                        OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                    }
+                case .translate:
+                    SectionCard(title: "Translate Post") {
+                        Picker("Language", selection: $vm.selectedLanguage) {
+                            ForEach(Language.allCases) { lang in
+                                Text(lang.rawValue).tag(lang)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Button {
+                            Task { await vm.generateForSelectedAction() }
+                        } label: {
+                            HStack {
+                                if vm.isGenerating { ProgressView() }
+                                Text("Generate Translation")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.isGenerating || vm.postPreview.isEmpty)
+                        
+                        OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                    }
+                case .summarise:
+                    SectionCard(title: "Summarise Post") {
+                        Picker("Summary Type", selection: $vm.summaryType) {
+                            ForEach(SummaryType.allCases) { s in
+                                Text(s.rawValue).tag(s)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Button {
+                            Task { await vm.generateForSelectedAction() }
+                        } label: {
+                            HStack {
+                                if vm.isGenerating { ProgressView() }
+                                Text("Generate Summary")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.isGenerating || vm.postPreview.isEmpty)
+                        
+                        OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                    }
+                case .none:
+                    EmptyView()
+                }
+            }
+        }
+    }
+    
+    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+    }
+}
+
+// MARK: - Create Post
+private final class CreatePostViewModel: ObservableObject {
+    enum Mode: String, CaseIterable, Identifiable { case new = "New Post", repost = "Repost"; var id: String { rawValue } }
+    
+    @Published var mode: Mode = .repost
+    
+    // New Post
+    @Published var postTopic: String = ""
+    @Published var tone: AITone = .professional
+    @Published var length: PostLength = .medium
+    @Published var keywords: String = ""
+    
+    // Repost
+    @Published var repostLink: String = ""
+    @Published var repostTone: AITone = .professional
+    @Published var useemoji: Bool = true
+    @Published var usehashtags: Bool = true
+    @Published var repostLength: PostLength = .medium
+    @Published var isValidRepostURL: Bool = false
+    
+    // Output
+    @Published var isGenerating: Bool = false
+    @Published var generationError: String? = nil
+    @Published var output: String = ""
+    
+    func validateRepostURL(_ text: String) {
+        repostLink = text
+        let pattern = #"^https?:\/\/(www\.)?linkedin\.com\/.*$"#
+        isValidRepostURL = text.range(of: pattern, options: .regularExpression) != nil
+    }
+    
+    @MainActor
+    func generate() async {
+        isGenerating = true
+        generationError = nil
+        output = ""
+        do {
+            switch mode {
+            case .new:
+                guard !postTopic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Post Topic is required"])
+                }
+                output = try await generateNewPost()
+                await decrementCreditIfSuccess()
+            case .repost:
+                guard isValidRepostURL else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Valid LinkedIn URL is required"])
+                }
+                output = try await generateRepost()
+                await decrementCreditIfSuccess()
+            }
+        } catch {
+            generationError = error.localizedDescription
+        }
+        isGenerating = false
+    }
+    
+    private func generateNewPost() async throws -> String {
+        let generator = LinkedInCommentGenerator(authToken: DualDefaults.string(forKey: "loggedInEmail") ?? UserDefaults.standard.string(forKey: "userEmail"))
+        return try await withCheckedThrowingContinuation { cont in
+            generator.createPost(postTopic: postTopic, contentTone: tone.rawValue, postLength: length.rawValue) { response in
+                DispatchQueue.main.async {
+                    guard let response = response else {
+                        cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                        return
+                    }
+                    
+                    let extracted = self.extractGeneratedText(from: response, key: "post")
+                    cont.resume(returning: extracted)
+                }
+            }
+        }
+    }
+    
+    private func generateRepost() async throws -> String {
+        let generator = LinkedInCommentGenerator(authToken: DualDefaults.string(forKey: "loggedInEmail") ?? UserDefaults.standard.string(forKey: "userEmail"))
+        return try await withCheckedThrowingContinuation { cont in
+            generator.createRepost(postUrl: repostLink, contentTone: repostTone.rawValue, postLength: repostLength.rawValue, useemoji: useemoji, usehashtag: usehashtags) { response in
+                DispatchQueue.main.async {
+                    guard let response = response else {
+                        cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                        return
+                    }
+                    let extracted = self.extractGeneratedText(from: response, key: "repost")
+                    cont.resume(returning: extracted)
+                }
+            }
+        }
+    }
+    func loadRepostLink() {
+        let defaults = UserDefaults(suiteName: "group.com.einstein.common")
+        let link = defaults?.string(forKey: "LastProcessedLink") ?? ""
+        repostLink = link
+        isValidRepostURL = !link.isEmpty
+    }
+
+    // Decrement 1 credit and refresh remaining count
+    @MainActor
+    private func decrementCreditIfSuccess() async {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        guard let email = email, !email.isEmpty else { return }
+        let generator = LinkedInCommentGenerator(authToken: email)
+        await withCheckedContinuation { cont in
+            generator.increaseComments(email: email, increment: -1) { _ in
+                ApiService.shared.getRemainingComments(email: email) { _ in
+                    cont.resume()
+                }
+            }
+        }
+    }
+    
+    private func cleanAPIString(_ s: String) -> String {
+        return s
+    }
+    
+    private func extractGeneratedText(from raw: String, key: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Remove wrapping quotes (if LLM returns stringified JSON)
+        if s.hasPrefix("\""), s.hasSuffix("\"") {
+            s = String(s.dropFirst().dropLast())
+        }
+
+        // Try JSON decode into dictionary
+        if let data = s.data(using: .utf8) {
+            if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let value = dict[key] as? String {
+                return value
+            }
+        }
+
+        // If still wrapped as "{\"post\":\"text\"}"
+        // Try one more pass after unescaping
+        let unescaped = s
+            .replacingOccurrences(of: #"\\n"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\\t"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\\\""#, with: "\"", options: .regularExpression)
+            .replacingOccurrences(of: #"\\\\"#, with: "\\", options: .regularExpression)
+
+        if let data2 = unescaped.data(using: .utf8),
+           let dict2 = try? JSONSerialization.jsonObject(with: data2) as? [String: Any],
+           let value2 = dict2[key] as? String {
+            return value2
+        }
+
+        // Regex fallback
+        if let range = s.range(of: "\"\(key)\"\\s*:\\s*\"(.+?)\"", options: .regularExpression) {
+            let m = String(s[range])
+            return m
+                .replacingOccurrences(of: "\"\(key)\":", with: "")
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"{} "))
+        }
+
+        return s
+    }
+
+    
+    private struct PostEnvelope: Decodable {
+        let post: String
+    }
+    private struct RepostEnvelope: Decodable {
+        let repost: String
+    }
+}
+
+private struct CreatePostView: View {
+    @StateObject private var vm = CreatePostViewModel()
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                Picker("Mode", selection: $vm.mode) {
+//                    Text("New Post").tag(CreatePostViewModel.Mode.new)
+                    Text("Repost").tag(CreatePostViewModel.Mode.repost)
+                }
+                .pickerStyle(.segmented)
+                
+                if vm.mode == .new {
+                    SectionCard(title: "New Post") {
+                        TextField("Post Topic", text: $vm.postTopic)
+                            .textFieldStyle(.roundedBorder)
+                        
+                        Picker("Content Tone", selection: $vm.tone) {
+                            ForEach(AITone.allCases) { t in
+                                Text(t.rawValue).tag(t)
+                            }
+                        }.pickerStyle(.menu)
+                        
+                        Picker("Post Length", selection: $vm.length) {
+                            ForEach(PostLength.allCases) { l in
+                                Text(l.rawValue).tag(l)
+                            }
+                        }.pickerStyle(.menu)
+                        
+                        TextField("Keywords (optional)", text: $vm.keywords)
+                            .textFieldStyle(.roundedBorder)
+                        
+                        Button {
+                            Task { await vm.generate() }
+                        } label: {
+                            HStack {
+                                if vm.isGenerating { ProgressView() }
+                                Text("Generate Post")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.isGenerating || vm.postTopic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        
+                        OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                    }
+                } else {
+                    SectionCard(title: "Repost") {
+//                        TextField("Post Link", text: Binding(
+//                            get: { vm.repostLink },
+//                            set: { vm.validateRepostURL($0) }
+//                        ))
+//                        .textInputAutocapitalization(.never)
+//                        .disableAutocorrection(true)
+//                        .keyboardType(.URL)
+//                        .textFieldStyle(.roundedBorder)
+                        Text(vm.repostLink.isEmpty ? "Please share link" : vm.repostLink.prefix(100))
+                                    .foregroundColor(vm.repostLink.isEmpty ? .gray : .primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(12)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                                    .onAppear {
+                                        vm.loadRepostLink()
+                                    }
+                        
+                        Picker("Content Tone", selection: $vm.repostTone) {
+                            ForEach(AITone.allCases) { t in
+                                Text(t.rawValue).tag(t)
+                            }
+                        }.pickerStyle(.menu)
+                        
+                        Picker("Post Length", selection: $vm.repostLength) {
+                            ForEach(PostLength.allCases) { l in
+                                Text(l.rawValue).tag(l)
+                            }
+                        }.pickerStyle(.menu)
+
+                        Toggle("Use Emojis and Hashtags", isOn: $vm.usehashtags)
+                            .toggleStyle(.switch) // default on most platforms
+                            .padding(.horizontal)
+                        
+                        Button {
+                            Task { await vm.generate() }
+                        } label: {
+                            HStack {
+                                if vm.isGenerating { ProgressView() }
+                                Text("Generate Repost")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.isGenerating || !vm.isValidRepostURL)
+                        
+                        OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - About Me
+private final class AboutMeViewModel: ObservableObject {
+    @Published var industry: String = ""
+    @Published var yearsOfExperience: String = ""
+    @Published var keySkills: String = ""
+    @Published var professionalGoal: String = ""
+    
+    @Published var isGenerating: Bool = false
+    @Published var generationError: String? = nil
+    @Published var output: String = ""
+    
+    @MainActor
+    func generate() async {
+        isGenerating = true
+        generationError = nil
+        output = ""
+        do {
+            guard !industry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Industry is required"])
+            }
+            guard !yearsOfExperience.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Years of Experience is required"])
+            }
+            guard Int(yearsOfExperience) != nil else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Years of Experience must be a number"])
+            }
+            guard !keySkills.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Key Skills are required"])
+            }
+            guard !professionalGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Professional Goal is required"])
+            }
+            
+            let generator = LinkedInCommentGenerator(authToken: DualDefaults.string(forKey: "loggedInEmail") ?? UserDefaults.standard.string(forKey: "userEmail"))
+            output = try await withCheckedThrowingContinuation { cont in
+                generator.createAboutMe(
+                    industry: industry,
+                    experience: yearsOfExperience,
+                    skills: keySkills,
+                    goal: professionalGoal
+                ) { response in
+                    DispatchQueue.main.async {
+                        guard let response = response else {
+                            cont.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+                            return
+                        }
+                        cont.resume(returning: self.cleanAPIString(response))
+                    }
+                }
+            }
+            await decrementCreditIfSuccess()
+        } catch {
+            generationError = error.localizedDescription
+        }
+        isGenerating = false
+    }
+    
+    // Decrement 1 credit and refresh remaining count
+    @MainActor
+    private func decrementCreditIfSuccess() async {
+        let email = DualDefaults.string(forKey: "loggedInEmail")
+            ?? UserDefaults.standard.string(forKey: "user_email")
+            ?? UserDefaults.standard.string(forKey: "userEmail")
+        guard let email = email, !email.isEmpty else { return }
+        let generator = LinkedInCommentGenerator(authToken: email)
+        await withCheckedContinuation { cont in
+            generator.increaseComments(email: email, increment: -1) { _ in
+                ApiService.shared.getRemainingComments(email: email) { _ in
+                    cont.resume()
+                }
+            }
+        }
+    }
+    
+    private func cleanAPIString(_ s: String) -> String {
+        var t = s
+        t = t.replacingOccurrences(of: "\\n", with: "\n")
+        t = t.replacingOccurrences(of: "\\t", with: " ")
+        t = t.replacingOccurrences(of: "\\\"", with: "\"")
+        t = t.replacingOccurrences(of: "\\\\", with: "\\")
+        t = t.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+        return t
+    }
+}
+
+private struct AboutMeView: View {
+    @StateObject private var vm = AboutMeViewModel()
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                SectionCard(title: "About Me") {
+                    TextField("Industry", text: $vm.industry)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Years of Experience", text: $vm.yearsOfExperience)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Key Skills (comma separated)", text: $vm.keySkills)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Professional Goal", text: $vm.professionalGoal)
+                        .textFieldStyle(.roundedBorder)
+                    
+                    Button {
+                        Task { await vm.generate() }
+                    } label: {
+                        HStack {
+                            if vm.isGenerating { ProgressView() }
+                            Text("Generate About Me")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(vm.isGenerating)
+                    
+                    OutputArea(text: vm.output, isLoading: vm.isGenerating, error: vm.generationError)
+                }
+            }
+        }
     }
 }
 
@@ -1376,4 +2198,3 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-

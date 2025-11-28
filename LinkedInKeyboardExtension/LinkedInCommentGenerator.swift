@@ -196,7 +196,7 @@ class LinkedInCommentGenerator {
             - Use varied language and structure to avoid repetitive phrasing.
             - Don't always start with "Wow".
             """
-        case "perspective", " perspective ", " perspective", "Perspective", "Perspective ", " Perspective", " Perspective ":
+        case "perspective","perspective ", " perspective ", " perspective", "Perspective", "Perspective ", " Perspective", " Perspective ":
             basePrompt = """
             Read the post by \(author) titled "\(postText)". Generate a thoughtful and unique comment in \(language) that offers a fresh perspective or expands on the author's ideas, ensuring it feels natural and conversational.
 
@@ -208,9 +208,6 @@ class LinkedInCommentGenerator {
             5. Avoid using any quotes, hashtags, or emojis.
             6. Keep the reply short, around 20-30 words.
             7. Make sure every comment generated feels personal and unique.
-
-            Post: \(postText)
-            Author: \(author)
             """
         case "question", " question", "Question", " Question", "Question ", " Question ":
             basePrompt = """
@@ -227,6 +224,22 @@ class LinkedInCommentGenerator {
             Post: \(postText)
             Author: \(author)
             """
+        case "Repost", " Repost", "Repost ", " Repost ", "repost", " repost", "repost "," repost ":
+            basePrompt = """
+            Generate a unique, thoughtful, human-like repost caption in \(language) for a LinkedIn post by \(author). The caption should provide an original perspective while staying relevant to the author’s content.
+
+            Guidelines:
+            1. Begin with a concise, personalized reflection that connects to the original post.
+            2. Add a meaningful insight, takeaway, or opinion that builds on the author’s message.
+            3. Avoid generic phrases like "Great post" or "Must read."
+            4. Keep the tone conversational, warm, and professional.
+            5. Ensure the caption is clear and concise, limited to under 35 words.
+            6. No quotes, emojis, or hashtags.
+
+            Post: \(postText)
+            Author: \(author)
+            """
+
         default:
             basePrompt = "Generate a short, friendly LinkedIn comment in \(language) for the post by \(author): \(postText)"
         }

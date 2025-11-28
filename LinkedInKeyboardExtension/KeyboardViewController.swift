@@ -3,10 +3,10 @@ import UIKit
 class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPickerViewDataSource {
     
     // MARK: - Prompts
-//    let prompts = [" Applaud ", "Agree", "Fun", " Perspective ", "Question", "Translate", "Personalize"]
-    let prompts = [" Applaud ", " Agree ", " Fun ", " Perspective ", " Question ", "Translate"]
+//    let prompts = [" Applaud ", "Agree", "Fun", " Perspective ", "Question", "Translate", "Personalize", "Repost"]
+    let prompts = [" Applaud ", " Agree ", " Fun ", " Perspective ", " Question ", "Translate"," Repost "]
     private var nextKeyboardButton: UIButton!
-    
+    private var deleteForwardButton: UIButton! // ⌦ forward delete
     
     // MARK: - Translate UI data
     private let languages = ["English", "Spanish", "French", "German", "Hindi", "Japanese"]
@@ -51,6 +51,7 @@ class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPic
         super.viewDidLoad()
         setupPromptKeyboard()
         setupNextKeyboardButton()
+        setupDeleteForwardButton()
         setupAlwaysVisibleToggles()
     }
     
@@ -99,6 +100,7 @@ class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPic
         emojisToggle.isHidden = hidden
         hashtagsToggle.isHidden = hidden
         nextKeyboardButton.isHidden = hidden
+        deleteForwardButton.isHidden = hidden
     }
 
     
@@ -155,21 +157,55 @@ class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPic
 
     
     
-    // MARK: - Globe (Next keyboard)
+    // MARK: - pen image (Next keyboard)
     private func setupNextKeyboardButton() {
-        nextKeyboardButton = UIButton(type: .system)
-        nextKeyboardButton.setTitle("🌐", for: .normal)
-        nextKeyboardButton.titleLabel?.font = UIFont.systemFont(ofSize: 22)
+        nextKeyboardButton = UIButton(type: .custom)
+        // Replace title with image
+        let penImage = UIImage(named: "pen")
+        nextKeyboardButton.setImage(penImage, for: .normal)
+        nextKeyboardButton.setTitle(nil, for: .normal)
+        nextKeyboardButton.tintColor = nil // keep original colors; set to a color if using template images
+        nextKeyboardButton.imageView?.contentMode = .scaleAspectFit
+        nextKeyboardButton.contentVerticalAlignment = .center
+        nextKeyboardButton.contentHorizontalAlignment = .center
+        nextKeyboardButton.imageEdgeInsets = UIEdgeInsets(top:8,left: 8,bottom: 8, right: 8)
         nextKeyboardButton.translatesAutoresizingMaskIntoConstraints = false
         nextKeyboardButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
+        
         view.addSubview(nextKeyboardButton)
         
         NSLayoutConstraint.activate([
             nextKeyboardButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
             nextKeyboardButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
-            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 44),
-            nextKeyboardButton.heightAnchor.constraint(equalToConstant: 44)
+            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 55),
+            nextKeyboardButton.heightAnchor.constraint(equalToConstant: 55)
         ])
+    }
+    
+    // MARK: - ⌦ Forward Delete button
+    private func setupDeleteForwardButton() {
+        deleteForwardButton = UIButton(type: .system)
+        deleteForwardButton.setTitle("⌫", for: .normal) // use backspace symbol to reflect actual behavior
+        deleteForwardButton.titleLabel?.font = UIFont.systemFont(ofSize: 22, weight: .regular)
+        deleteForwardButton.translatesAutoresizingMaskIntoConstraints = false
+        deleteForwardButton.addTarget(self, action: #selector(deleteForwardAction), for: .touchUpInside)
+        view.addSubview(deleteForwardButton)
+        
+        NSLayoutConstraint.activate([
+            deleteForwardButton.leadingAnchor.constraint(equalTo: nextKeyboardButton.trailingAnchor, constant: 8),
+            deleteForwardButton.centerYAnchor.constraint(equalTo: nextKeyboardButton.centerYAnchor),
+            deleteForwardButton.widthAnchor.constraint(equalToConstant: 44),
+            deleteForwardButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+        
+        // Make sure both bottom controls stay on top of overlays
+        view.bringSubviewToFront(nextKeyboardButton)
+        view.bringSubviewToFront(deleteForwardButton)
+    }
+    
+    @objc private func deleteForwardAction() {
+        // UITextDocumentProxy only supports backward deletion.
+        textDocumentProxy.deleteBackward()
     }
     
     // MARK: - Prompt tapped
@@ -284,6 +320,7 @@ class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPic
         
         // Make sure the globe button stays on top
         view.bringSubviewToFront(nextKeyboardButton)
+        view.bringSubviewToFront(deleteForwardButton)
     }
     
     private func makeLabel(_ text: String) -> UILabel {
@@ -404,6 +441,7 @@ class KeyboardViewController: UIInputViewController, UIPickerViewDelegate, UIPic
         
         // Keep globe button on top
         view.bringSubviewToFront(nextKeyboardButton)
+        view.bringSubviewToFront(deleteForwardButton)
         
         // Optional: store reference to tone input for later
         personalizeToneInput = toneInput
